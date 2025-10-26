@@ -1,5 +1,3 @@
 # SwiftScaffolding
 
-Scaffolding 协议的 Swift 实现。
-
-Scaffolding 文档：https://www.kdocs.cn/l/ckDLKtcYPXFx
+[Scaffolding 协议](https://github.com/Scaffolding-MC/Scaffolding-MC)的 Swift 实现。
