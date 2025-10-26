@@ -27,6 +27,8 @@ public final class EasyTier {
         self.logURL = logURL
     }
     
+    /// 启动 EasyTier。
+    /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: [String]) throws {
         let process: Process = Process()
         process.executableURL = coreURL
@@ -48,6 +50,11 @@ public final class EasyTier {
         self.process = process
     }
     
+    /// 以 JSON 模式调用 `easytier-cli`。
+    /// 如果 `easytier-cli` 报错，会抛出 `EasyTierError.cliError` 错误。
+    /// - Parameter args: `easytier-cli` 的参数。
+    /// - Returns: 调用结果。
+    @discardableResult
     public func callCLI(_ args: String...) throws -> JSON {
         let process: Process = Process()
         process.executableURL = cliURL
@@ -78,5 +85,44 @@ public final class EasyTier {
         
         /// `easytier-cli` 报错。
         case cliError(message: String)
+    }
+}
+
+extension EasyTier {
+    /// 添加端口转发规则。
+    /// - Parameters:
+    ///   - protocol: 使用的协议类型，默认为 `tcp`。
+    ///   - bind: 本地绑定地址。
+    ///   - destination: 目标地址。
+    public func addPortForward(protocol: String = "tcp", bind: String, destination: String) throws {
+        try callCLI("port-forward", "add", `protocol`, bind, destination)
+    }
+    
+    /// 移除端口转发规则。
+    /// - Parameters:
+    ///   - protocol: 使用的协议类型，默认为 `tcp`。
+    ///   - bind: 本地绑定地址。
+    ///   - destination: 目标地址。
+    public func removePortForward(protocol: String = "tcp", bind: String) throws {
+        try callCLI("port-forward", "remove", `protocol`, bind)
+    }
+    
+    /// 获取当前连接的所有节点列表。
+    /// - Returns: 包含所有已连接节点的 `Peer` 数组。
+    public func getPeerList() throws -> [Peer] {
+        let result: JSON = try callCLI("peer", "list")
+        return result.arrayValue.map { peer in
+            return Peer(
+                ipv4: peer["ipv4"].stringValue,
+                hostname: peer["hostname"].stringValue,
+                tunnel: peer["tunnel_proto"].stringValue.split(separator: ",").map(String.init)
+            )
+        }
+    }
+    
+    public struct Peer {
+        public let ipv4: String
+        public let hostname: String
+        public let tunnel: [String]
     }
 }
