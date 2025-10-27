@@ -50,28 +50,27 @@ public final class Scaffolding {
     }
     
     private static func receive(from connection: NWConnection, continuation: CheckedContinuation<SCFResponse, Error>) {
-        let buffer: ByteBuffer = ByteBuffer()
-        var status: UInt8?
-        var bodyLength: UInt32?
-        connection.receive(minimumIncompleteLength: 1, maximumLength: 4096) { data, context, isComplete, error in
+        connection.receive(minimumIncompleteLength: 5, maximumLength: 5) { data, context, isComplete, error in
             if let error = error {
                 continuation.resume(throwing: error)
                 return
             }
-            
-            if let data = data, !data.isEmpty {
-                buffer.writeData(data)
-                if buffer.data.count >= 1 {
-                    status = buffer.readUInt8()
+            if let data = data {
+                let buffer: ByteBuffer = ByteBuffer(data: data)
+                let status: UInt8 = buffer.readUInt8()
+                let bodyLength: Int = Int(buffer.readUInt32())
+                if bodyLength == 0 {
+                    continuation.resume(returning: SCFResponse(status: status, data: Data()))
+                    return
                 }
-                if buffer.data.count >= 5 {
-                    bodyLength = buffer.readUInt32()
-                }
-                
-                if let status = status,
-                    let bodyLength = bodyLength,
-                    buffer.data.count == 5 + bodyLength {
-                    continuation.resume(returning: SCFResponse(status: status, data: buffer.readData(length: Int(bodyLength))))
+                connection.receive(minimumIncompleteLength: bodyLength, maximumLength: bodyLength) { data, context, isComplete, error in
+                    if let error = error {
+                        continuation.resume(throwing: error)
+                        return
+                    }
+                    if let data = data {
+                        continuation.resume(returning: SCFResponse(status: status, data: data))
+                    }
                 }
             }
         }
