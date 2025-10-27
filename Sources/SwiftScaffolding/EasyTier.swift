@@ -53,9 +53,9 @@ public final class EasyTier {
     /// 以 JSON 模式调用 `easytier-cli`。
     /// 如果 `easytier-cli` 报错，会抛出 `EasyTierError.cliError` 错误。
     /// - Parameter args: `easytier-cli` 的参数。
-    /// - Returns: 调用结果。
+    /// - Returns: 调用结果，不是 JSON 时为 `nil`。
     @discardableResult
-    public func callCLI(_ args: String...) throws -> JSON {
+    public func callCLI(_ args: String...) throws -> JSON? {
         let process: Process = Process()
         process.executableURL = cliURL
         process.arguments = ["--output", "json"] + args
@@ -75,7 +75,7 @@ public final class EasyTier {
         guard let data: Data = try output.fileHandleForReading.readToEnd() else {
             throw NSError(domain: "EasyTier", code: -1, userInfo: [NSLocalizedDescriptionKey: "Reached EOF of CLI stdout"])
         }
-        return try JSON(data: data)
+        return try? JSON(data: data)
     }
     
     
@@ -110,7 +110,7 @@ extension EasyTier {
     /// 获取当前连接的所有节点列表。
     /// - Returns: 包含所有已连接节点的 `Peer` 数组。
     public func getPeerList() throws -> [Peer] {
-        let result: JSON = try callCLI("peer", "list")
+        let result: JSON = try callCLI("peer", "list")!
         return result.arrayValue.map { peer in
             return Peer(
                 ipv4: peer["ipv4"].stringValue,
