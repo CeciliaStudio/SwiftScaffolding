@@ -24,40 +24,30 @@ public final class Scaffolding {
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机房间码
     /// - Returns: 生成的房间码。
     public static func generateRoomCode() -> String {
-        let charset: [Character] = Array("0123456789ABCDEFGHJKLMNPQRSTUVWXYZ")
-        let mapping: [Character: Int] = Dictionary(uniqueKeysWithValues: charset.enumerated().map { ($1, $0) })
-        
-        func randomChar() -> Character {
-            var byte: UInt8 = 0
-            repeat {
-                byte = UInt8.random(in: 0..<34)
-            } while byte >= charset.count
-            return charset[Int(byte)]
+        let charset: [String] = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ".map { String($0) }
+        let b: Int = 34
+        var digits: [Int] = []
+        var sumMod7: Int = 0
+        var powMod7: Int = 1
+        for _ in 0..<15 {
+            let d: Int = Int.random(in: 0..<b)
+            digits.append(d)
+            sumMod7 = (sumMod7 + d * powMod7) % 7
+            powMod7 = (powMod7 * b) % 7
         }
+        let invPow15: Int = 6
+        let base: Int = ((7 - (sumMod7 % 7)) * invPow15) % 7
+        let kMax: Int = ((b - 1) - base) / 7
+        let d15: Int = base + 7 * Int.random(in: 0...kMax)
+        digits.append(d15)
         
-        while true {
-            var code: [Character] = []
-            code.append("U")
-            code.append("/")
-            for _ in 0..<4 { code.append(randomChar()) }
-            code.append("-")
-            for _ in 0..<4 { code.append(randomChar()) }
-            code.append("-")
-            for _ in 0..<4 { code.append(randomChar()) }
-            code.append("-")
-            for _ in 0..<4 { code.append(randomChar()) }
-            
-            let codeChars: [Character] = Array(code[2...5] + code[7...10] + code[12...15] + code[17...20])
-            let nums: [Int] = codeChars.map { mapping[$0] ?? 0 }
-            
-            var remainder: Int = 0
-            for n in nums {
-                remainder = (remainder * 34 + n) % 7
-            }
-            if remainder == 0 {
-                return String(code)
-            }
+        var code: String = ""
+        for i in 0..<16 {
+            let idx: Int = digits[i]
+            code += charset[idx]
+            if i == 3 || i == 7 || i == 11 { code += "-" }
         }
+        return "U/" + String(code.reversed())
     }
     
     /// 发送 Scaffolding 请求。
