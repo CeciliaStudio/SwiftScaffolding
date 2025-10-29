@@ -10,9 +10,7 @@ import Network
 
 public final class Room {
     /// 房客列表。
-    public internal(set) var members: [Member]
-    
-    internal init() {
-        self.members = []
-    }
+    public internal(set) var members: [Member] = []
+    /// Minecraft 服务器端口。
+    public internal(set) var serverPort: UInt16?
 }

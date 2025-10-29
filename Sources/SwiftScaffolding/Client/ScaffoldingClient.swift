@@ -17,6 +17,7 @@ public final class ScaffoldingClient {
     private let player: Member
     private let roomCode: String
     private var connection: NWConnection!
+    private var remoteIP: String!
     
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
     /// - Parameters:
@@ -65,8 +66,9 @@ public final class ScaffoldingClient {
             guard let node = try? easyTier.getPeerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
                 continue
             }
+            remoteIP = node.ipv4
             let port: String = String(node.hostname.dropFirst("scaffolding-mc-server-".count))
-            try easyTier.addPortForward(bind: "127.0.0.1:\(port)", destination: "\(node.ipv4):\(port)")
+            try easyTier.addPortForward(bind: "127.0.0.1:\(port)", destination: "\(remoteIP!):\(port)")
             try await joinRoom(port: port)
             return
         }
@@ -79,7 +81,7 @@ public final class ScaffoldingClient {
     ///   - body: 请求体构造函数。
     /// - Returns: 联机中心的响应。
     @discardableResult
-    public func sendRequest(_ name: String, body: (ByteBuffer) throws -> Void) async throws -> SCFResponse {
+    public func sendRequest(_ name: String, body: (ByteBuffer) throws -> Void = { _ in }) async throws -> SCFResponse {
         try assertReady()
         return try await Scaffolding.sendRequest(name, to: connection, body: body)
     }
@@ -90,7 +92,7 @@ public final class ScaffoldingClient {
         try await sendRequest("c:player_ping") { buf in
             buf.writeData(try encoder.encode(player))
         }
-        let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list", body: { _ in }).data)
+        let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list").data)
         self.room.members = memberList
     }
     
@@ -120,8 +122,11 @@ public final class ScaffoldingClient {
             }
             connection.start(queue: Self.connectQueue)
         }
-        self.room = .init()
+        room = .init()
         try await heartbeat()
+        let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
+        try easyTier.addPortForward(bind: "127.0.0.1:\(serverPort)", destination: "\(remoteIP!):\(serverPort)")
+        room.serverPort = serverPort
     }
     
     private func assertReady() throws {
