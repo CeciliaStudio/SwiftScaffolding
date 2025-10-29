@@ -29,7 +29,7 @@ public final class EasyTier {
     
     /// 启动 EasyTier。
     /// - Parameter args: `easytier-core` 的参数。
-    public func launch(_ args: [String]) throws {
+    public func launch(_ args: String...) throws {
         let process: Process = Process()
         process.executableURL = coreURL
         process.arguments = args
