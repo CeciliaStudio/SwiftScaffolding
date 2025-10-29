@@ -14,8 +14,8 @@ public final class Room {
     private var connection: NWConnection?
     private let easyTier: EasyTier
     
-    public init(members: [Member], easyTier: EasyTier) {
-        self.members = members
+    public init(easyTier: EasyTier) {
+        self.members = []
         self.easyTier = easyTier
     }
     
