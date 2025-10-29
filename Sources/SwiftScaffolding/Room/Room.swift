@@ -39,18 +39,18 @@ public final class Room {
             }
             let port: String = String(node.hostname.dropFirst("scaffolding-mc-server-".count))
             try easyTier.addPortForward(bind: "127.0.0.1:\(port)", destination: "\(node.ipv4):\(port)")
-            try await createConnection(to: node.ipv4, port: port)
+            try await createConnection(port: port)
             return
         }
         throw ConnectionError.timeout
     }
     
-    private func createConnection(to host: String, port: String) async throws {
+    private func createConnection(port: String) async throws {
         guard let port: NWEndpoint.Port = NWEndpoint.Port(port) else {
             throw ConnectionError.invalidPort
         }
         
-        let connection: NWConnection = NWConnection(to: .hostPort(host: NWEndpoint.Host(host), port: port), using: .tcp)
+        let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: port), using: .tcp)
         try await withCheckedThrowingContinuation { continuation in
             connection.stateUpdateHandler = { state in
                 if state == .ready {
