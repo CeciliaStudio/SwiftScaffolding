@@ -14,10 +14,18 @@ public struct Member: Codable {
     public let machineID: String
     /// 玩家的联机客户端信息。
     public let vendor: String
+    /// 玩家类型。
+    public let kind: Kind
+    
+    public enum Kind: String, Codable {
+        case host = "HOST"
+        case guest = "GUEST"
+    }
     
     public enum CodingKeys: String, CodingKey {
         case name
         case machineID = "machine_id"
         case vendor
+        case kind
     }
 }
