@@ -120,6 +120,7 @@ public final class ScaffoldingClient {
             }
             connection.start(queue: Self.connectQueue)
         }
+        self.room = .init()
         try await heartbeat()
     }
     
