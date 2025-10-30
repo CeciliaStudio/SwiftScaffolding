@@ -104,23 +104,25 @@ public final class ScaffoldingClient {
         }
         
         let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: port), using: .tcp)
-        try await withCheckedThrowingContinuation { continuation in
-            connection.stateUpdateHandler = { state in
-                if state == .ready {
-                    self.connection = connection
-                    continuation.resume()
-                    return
-                }
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            @Sendable func finish(_ result: Result<Void, Error>) {
+                connection.stateUpdateHandler = nil
+                continuation.resume(with: result)
+            }
+            
+            connection.stateUpdateHandler = { [weak self] state in
                 switch state {
-                case .failed(let error), .waiting(let error):
-                    continuation.resume(throwing: error)
+                case .ready:
+                    self?.connection = connection
+                    finish(.success(()))
+                case .failed(let error):
+                    finish(.failure(error))
                 case .cancelled:
-                    continuation.resume(throwing: ConnectionError.cancelled)
+                    finish(.failure(ConnectionError.cancelled))
                 default:
                     break
                 }
             }
-            connection.start(queue: Self.connectQueue)
         }
         room = .init()
         try await heartbeat()
