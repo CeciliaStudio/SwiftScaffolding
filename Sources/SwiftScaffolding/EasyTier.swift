@@ -35,9 +35,10 @@ public final class EasyTier {
         process.arguments = args
         
         if let logURL = logURL {
-            if !FileManager.default.fileExists(atPath: logURL.path) {
-                FileManager.default.createFile(atPath: logURL.path, contents: nil)
+            if FileManager.default.fileExists(atPath: logURL.path) {
+                try FileManager.default.removeItem(at: logURL)
             }
+            FileManager.default.createFile(atPath: logURL.path, contents: nil)
             let handle: FileHandle = try FileHandle(forWritingTo: logURL)
             process.standardOutput = handle
             process.standardError = handle
