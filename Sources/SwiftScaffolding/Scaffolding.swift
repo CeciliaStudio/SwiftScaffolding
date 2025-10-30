@@ -70,20 +70,36 @@ public final class Scaffolding {
         buffer.writeData(bodyBuffer.data)
         
         return try await withCheckedThrowingContinuation { continuation in
+            var didResume: Bool = false
+            func safeResume(_ block: () -> Void) {
+                if !didResume {
+                    didResume = true
+                    block()
+                }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+                safeResume {
+                    continuation.resume(throwing: ConnectionError.timeout)
+                }
+            }
             connection.send(content: buffer.data, completion: .contentProcessed({ error in
-                if let error = error {
-                    continuation.resume(throwing: error)
+                if let error: NWError = error {
+                    safeResume { continuation.resume(throwing: error) }
                 } else {
-                    receive(from: connection, continuation: continuation)
+                    receive(from: connection) { result in
+                        safeResume { continuation.resume(with: result) }
+                    }
                 }
             }))
         }
     }
     
-    private static func receive(from connection: NWConnection, continuation: CheckedContinuation<SCFResponse, Error>) {
+    
+    
+    private static func receive(from connection: NWConnection, completion: @escaping (Result<SCFResponse, Error>) -> Void) {
         connection.receive(minimumIncompleteLength: 5, maximumLength: 5) { data, context, isComplete, error in
             if let error = error {
-                continuation.resume(throwing: error)
+                completion(.failure(error))
                 return
             }
             if let data = data {
@@ -91,16 +107,16 @@ public final class Scaffolding {
                 let status: UInt8 = buffer.readUInt8()
                 let bodyLength: Int = Int(buffer.readUInt32())
                 if bodyLength == 0 {
-                    continuation.resume(returning: SCFResponse(status: status, data: Data()))
+                    completion(.success(SCFResponse(status: status, data: Data())))
                     return
                 }
                 connection.receive(minimumIncompleteLength: bodyLength, maximumLength: bodyLength) { data, context, isComplete, error in
                     if let error = error {
-                        continuation.resume(throwing: error)
+                        completion(.failure(error))
                         return
                     }
                     if let data = data {
-                        continuation.resume(returning: SCFResponse(status: status, data: data))
+                        completion(.success(SCFResponse(status: status, data: data)))
                     }
                 }
             }

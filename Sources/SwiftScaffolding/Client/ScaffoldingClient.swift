@@ -139,16 +139,4 @@ public final class ScaffoldingClient {
             throw ConnectionError.invalidConnectionState
         }
     }
-    
-    public enum ConnectionError: Error {
-        case invalidPort
-        case timeout
-        case cancelled
-        case missingConnection
-        case invalidConnectionState
-    }
-    
-    public enum RoomCodeError: Error {
-        case invalidRoomCode
-    }
 }
