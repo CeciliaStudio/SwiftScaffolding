@@ -11,6 +11,8 @@ import CryptoKit
 import Network
 
 public final class Scaffolding {
+    internal static let connectQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.ScaffoldingClient.Connect")
+    
     /// 根据设备的主板唯一标识符生成设备标识符。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id
     /// - Returns: 设备标识符。
@@ -18,36 +20,6 @@ public final class Scaffolding {
         let service: io_service_t = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
         let uuid: String = IORegistryEntryCreateCFProperty(service, "IOPlatformUUID" as CFString, kCFAllocatorDefault, 0).takeUnretainedValue() as? String ?? UUID().uuidString
         return Insecure.SHA1.hash(data: Data(uuid.utf8)).map { String(format: "%02hhx", $0) }.joined()
-    }
-    
-    /// 生成符合 Scaffolding 标准的房间码。
-    /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机房间码
-    /// - Returns: 生成的房间码。
-    public static func generateRoomCode() -> String {
-        let charset: [String] = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ".map { String($0) }
-        let b: Int = 34
-        var digits: [Int] = []
-        var sumMod7: Int = 0
-        var powMod7: Int = 1
-        for _ in 0..<15 {
-            let d: Int = Int.random(in: 0..<b)
-            digits.append(d)
-            sumMod7 = (sumMod7 + d * powMod7) % 7
-            powMod7 = (powMod7 * b) % 7
-        }
-        let invPow15: Int = 6
-        let base: Int = ((7 - (sumMod7 % 7)) * invPow15) % 7
-        let kMax: Int = ((b - 1) - base) / 7
-        let d15: Int = base + 7 * Int.random(in: 0...kMax)
-        digits.append(d15)
-        
-        var code: String = ""
-        for i in 0..<16 {
-            let idx: Int = digits[i]
-            code += charset[idx]
-            if i == 3 || i == 7 || i == 11 { code += "-" }
-        }
-        return "U/" + String(code.reversed())
     }
     
     /// 发送 Scaffolding 请求。
@@ -60,7 +32,7 @@ public final class Scaffolding {
         _ type: String,
         to connection: NWConnection,
         body: (ByteBuffer) throws -> Void
-    ) async throws -> SCFResponse {
+    ) async throws -> Response {
         let buffer: ByteBuffer = ByteBuffer()
         buffer.writeUInt8(UInt8(type.count))
         buffer.writeData(type.data(using: .utf8)!)
@@ -77,7 +49,7 @@ public final class Scaffolding {
                     block()
                 }
             }
-            DispatchQueue.main.asyncAfter(deadline: .now() + 5) {
+            connectQueue.asyncAfter(deadline: .now() + 5) {
                 safeResume {
                     continuation.resume(throwing: ConnectionError.timeout)
                 }
@@ -96,7 +68,7 @@ public final class Scaffolding {
     
     
     
-    private static func receive(from connection: NWConnection, completion: @escaping (Result<SCFResponse, Error>) -> Void) {
+    private static func receive(from connection: NWConnection, completion: @escaping (Result<Response, Error>) -> Void) {
         connection.receive(minimumIncompleteLength: 5, maximumLength: 5) { data, context, isComplete, error in
             if let error = error {
                 completion(.failure(error))
@@ -107,7 +79,7 @@ public final class Scaffolding {
                 let status: UInt8 = buffer.readUInt8()
                 let bodyLength: Int = Int(buffer.readUInt32())
                 if bodyLength == 0 {
-                    completion(.success(SCFResponse(status: status, data: Data())))
+                    completion(.success(Response(status: status, data: Data())))
                     return
                 }
                 connection.receive(minimumIncompleteLength: bodyLength, maximumLength: bodyLength) { data, context, isComplete, error in
@@ -116,25 +88,39 @@ public final class Scaffolding {
                         return
                     }
                     if let data = data {
-                        completion(.success(SCFResponse(status: status, data: data)))
+                        completion(.success(Response(status: status, data: data)))
                     }
                 }
             }
         }
     }
     
-    private init() {
+    public final class Response {
+        public let status: UInt8
+        public let data: Data
+        public var text: String? { String(data: data, encoding: .utf8) }
+        
+        /// 根据响应状态码与响应体创建响应。
+        /// - Parameters:
+        ///   - status: 响应状态。
+        ///   - data: 响应体。
+        public init(status: UInt8, data: Data) {
+            self.status = status
+            self.data = data
+        }
+        
+        /// 根据响应状态码与响应体构造函数创建响应。
+        /// - Parameters:
+        ///   - status: 响应状态。
+        ///   - body: 响应体构造函数。
+        public init(status: UInt8, body: (ByteBuffer) -> Void) {
+            self.status = status
+            let buffer: ByteBuffer = .init()
+            body(buffer)
+            self.data = buffer.data
+        }
     }
-}
-
-public final class SCFResponse {
-    public let status: UInt8
-    public let data: Data
-    public let text: String?
     
-    init(status: UInt8, data: Data) {
-        self.status = status
-        self.data = data
-        self.text = String(data: data, encoding: .utf8)
+    private init() {
     }
 }

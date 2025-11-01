@@ -9,7 +9,6 @@ import Foundation
 import Network
 
 public final class ScaffoldingClient {
-    private static let connectQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.ScaffoldingClient.Connect")
     public private(set) var room: Room!
     private let easyTier: EasyTier
     private let encoder: JSONEncoder
@@ -49,8 +48,7 @@ public final class ScaffoldingClient {
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议
     public func connect() async throws {
-        let pattern = #/^U\/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/#
-        guard roomCode.wholeMatch(of: pattern) != nil else {
+        guard RoomCode.isValid(code: roomCode) else {
             throw RoomCodeError.invalidRoomCode
         }
         let networkName: String = "scaffolding-mc-\(roomCode.dropFirst(2).prefix(9))"
@@ -81,7 +79,7 @@ public final class ScaffoldingClient {
     ///   - body: 请求体构造函数。
     /// - Returns: 联机中心的响应。
     @discardableResult
-    public func sendRequest(_ name: String, body: (ByteBuffer) throws -> Void = { _ in }) async throws -> SCFResponse {
+    public func sendRequest(_ name: String, body: (ByteBuffer) throws -> Void = { _ in }) async throws -> Scaffolding.Response {
         try assertReady()
         return try await Scaffolding.sendRequest(name, to: connection, body: body)
     }
@@ -123,7 +121,7 @@ public final class ScaffoldingClient {
                     break
                 }
             }
-            connection.start(queue: Self.connectQueue)
+            connection.start(queue: Scaffolding.connectQueue)
         }
         room = .init()
         try await heartbeat()

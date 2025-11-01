@@ -28,4 +28,19 @@ public struct Member: Codable {
         case vendor
         case kind
     }
+    
+    public init(from decoder: any Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        self.name = try container.decode(String.self, forKey: .name)
+        self.machineID = try container.decode(String.self, forKey: .machineID)
+        self.vendor = try container.decode(String.self, forKey: .vendor)
+        self.kind = try container.decodeIfPresent(Member.Kind.self, forKey: .kind) ?? .guest
+    }
+    
+    public init(name: String, machineID: String, vendor: String, kind: Kind) {
+        self.name = name
+        self.machineID = machineID
+        self.vendor = vendor
+        self.kind = kind
+    }
 }
