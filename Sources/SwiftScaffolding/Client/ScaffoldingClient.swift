@@ -57,7 +57,8 @@ public final class ScaffoldingClient {
             "--no-tun", "-d",
             "--network-name", networkName,
             "--network-secret", networkSecret,
-            "-p", "tcp://public.easytier.cn:11010"
+            "-p", "tcp://public.easytier.cn:11010",
+            "--tcp-whitelist=0"
         )
         for _ in 0..<15 {
             try await Task.sleep(for: .seconds(1))
@@ -94,6 +95,12 @@ public final class ScaffoldingClient {
         self.room.members = memberList
     }
     
+    /// 退出房间并关闭连接。
+    public func stop() throws {
+        easyTier.kill()
+        connection.cancel()
+    }
+    
     
     
     private func joinRoom(port: String) async throws {
@@ -123,7 +130,7 @@ public final class ScaffoldingClient {
             }
             connection.start(queue: Scaffolding.connectQueue)
         }
-        room = .init()
+        room = Room(members: [], serverPort: 0)
         try await heartbeat()
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
         try easyTier.addPortForward(bind: "127.0.0.1:\(serverPort)", destination: "\(remoteIP!):\(serverPort)")

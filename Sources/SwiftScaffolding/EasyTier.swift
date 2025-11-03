@@ -30,6 +30,7 @@ public final class EasyTier {
     /// 启动 EasyTier。
     /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: String...) throws {
+        kill()
         let process: Process = Process()
         process.executableURL = coreURL
         process.arguments = args
@@ -49,6 +50,12 @@ public final class EasyTier {
         
         try process.run()
         self.process = process
+    }
+    
+    /// 杀死 `easytier-core` 进程。
+    public func kill() {
+        self.process?.terminate()
+        self.process = nil
     }
     
     /// 以 JSON 模式调用 `easytier-cli`。

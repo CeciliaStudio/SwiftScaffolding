@@ -16,14 +16,29 @@ public final class ScaffoldingServer {
     private let easyTier: EasyTier
     private var listener: NWListener!
     private var handler: RequestHandler!
+    private var errorHandler: ErrorHandler?
+    private var connections: [NWConnection] = []
     
     /// 使用指定的 EasyTier 创建联机中心。
-    /// - Parameter easyTier: 使用的 EasyTier。
-    /// - Parameter roomCode: 房间码。若不合法，将在 `start()` 中抛出 `RoomCodeError.invalidRoomCode` 错误。
-    /// - Parameter serverPort: Minecraft 服务器端口号。
-    public init(easyTier: EasyTier, roomCode: String, serverPort: UInt16) {
-        self.room = Room()
-        self.room.serverPort = serverPort
+    /// - Parameters:
+    ///   - easyTier: 使用的 EasyTier。
+    ///   - roomCode: 房间码。若不合法，将在 `createRoom()` 中抛出 `RoomCodeError.invalidRoomCode` 错误。
+    ///   - playerName: 玩家名。
+    ///   - vendor: 联机客户端信息。
+    ///   - serverPort: Minecraft 服务器端口号。
+    ///   - errorHandler: 异步错误处理对象。
+    public init(
+        easyTier: EasyTier,
+        roomCode: String,
+        playerName: String,
+        vendor: String,
+        serverPort: UInt16,
+        errorHandler: ErrorHandler? = nil
+    ) {
+        self.room = Room(
+            members: [.init(name: playerName, machineID: Scaffolding.getMachineID(), vendor: vendor, kind: .host)],
+            serverPort: serverPort
+        )
         self.easyTier = easyTier
         self.roomCode = roomCode
         
@@ -31,16 +46,32 @@ public final class ScaffoldingServer {
         self.encoder.outputFormatting = .withoutEscapingSlashes
         self.decoder = JSONDecoder()
         self.handler = RequestHandler(server: self)
+        self.errorHandler = errorHandler
     }
     
+    /// 启动连接监听器。
     public func startListener() async throws {
         listener = try NWListener(using: .tcp)
         listener.newConnectionHandler = { connection in
-            connection.stateUpdateHandler = { state in
-                if state == .ready {
+            connection.stateUpdateHandler = { [weak self] state in
+                guard let self = self else { return }
+                switch state {
+                case .ready:
+                    if !self.connections.contains(where: { $0 === connection }) { self.connections.append(connection) }
                     Task {
-                        try await self.receive(from: connection)
+                        do {
+                            try await self.startReceiving(from: connection)
+                        } catch {
+                            self.errorHandler?.handle(error)
+                            connection.cancel()
+                        }
                     }
+                case .failed, .cancelled:
+                    if let idx = self.connections.firstIndex(where: { $0 === connection }) {
+                        self.connections.remove(at: idx)
+                    }
+                default:
+                    break
                 }
             }
             connection.start(queue: Scaffolding.connectQueue)
@@ -48,22 +79,56 @@ public final class ScaffoldingServer {
         listener.start(queue: Scaffolding.connectQueue)
     }
     
+    /// 创建 EasyTier 网络。
+    public func createRoom() throws {
+        guard let listener = listener,
+              let port = listener.port?.debugDescription else {
+            throw ConnectionError.invalidConnectionState
+        }
+        guard RoomCode.isValid(code: roomCode) else {
+            throw RoomCodeError.invalidRoomCode
+        }
+        let networkName: String = "scaffolding-mc-\(roomCode.dropFirst(2).prefix(9))"
+        let networkSecret: String = String(roomCode.dropFirst(2).suffix(9))
+        try easyTier.launch(
+            "--no-tun", "-d",
+            "--network-name", networkName,
+            "--network-secret", networkSecret,
+            "--hostname", "scaffolding-mc-server-\(port)",
+            "-p", "tcp://public.easytier.cn:11010",
+            "--tcp-whitelist=\(port)",
+            "--tcp-whitelist=\(room.serverPort)"
+        )
+    }
+    
+    /// 关闭房间并断开所有连接。
+    public func stop() throws {
+        easyTier.kill()
+        listener.cancel()
+        for connection in connections {
+            connection.cancel()
+        }
+        connections = []
+        handler = nil
+    }
     
     
-    private func receive(from connection: NWConnection) async throws {
-        let headerBuffer: ByteBuffer = .init()
-        headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: 1))
-        let typeLength: Int = Int(headerBuffer.readUInt8())
-        headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
-        guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
-        
-        let bodyLength: Int = Int(headerBuffer.readUInt32())
-        let bodyData: Data = headerBuffer.readData(length: bodyLength)
-        if let handler = handler {
-            let responseBuffer: ByteBuffer = .init()
-            guard try handler.handleRequest(type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else { return }
-            connection.send(content: responseBuffer.data, completion: .idempotent)
-            try await receive(from: connection)
+    
+    private func startReceiving(from connection: NWConnection) async throws {
+        while true {
+            let headerBuffer: ByteBuffer = .init()
+            headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: 1))
+            let typeLength: Int = Int(headerBuffer.readUInt8())
+            headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
+            guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
+            
+            let bodyLength: Int = Int(headerBuffer.readUInt32())
+            let bodyData: Data = headerBuffer.readData(length: bodyLength)
+            if let handler = handler {
+                let responseBuffer: ByteBuffer = .init()
+                guard try handler.handleRequest(type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else { return }
+                connection.send(content: responseBuffer.data, completion: .idempotent)
+            }
         }
     }
 }

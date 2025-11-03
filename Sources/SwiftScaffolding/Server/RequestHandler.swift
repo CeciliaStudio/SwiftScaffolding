@@ -57,10 +57,7 @@ public class RequestHandler {
     }
     
     private func handleServerPortRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
-        guard let serverPort = server.room.serverPort else {
-            return .init(status: 32, data: Data())
-        }
-        return .init(status: 0) { $0.writeUInt16(serverPort) }
+        return .init(status: 0) { $0.writeUInt16(server.room.serverPort) }
     }
     
     private func handlePlayerPingRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
