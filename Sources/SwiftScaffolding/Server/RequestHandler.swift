@@ -40,6 +40,8 @@ public class RequestHandler {
         registerHandler(for: "c:ping", handler: handlePingRequest(_:))
         registerHandler(for: "c:protocols", handler: handleProtocolsRequest(_:))
         registerHandler(for: "c:server_port", handler: handleServerPortRequest(_:))
+        registerHandler(for: "c:player_ping", handler: handlePlayerPingRequest(_:))
+        registerHandler(for: "c:player_profiles_list", handler: handlePlayerProfilesListRequest(_:))
     }
     
     private func handlePingRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
@@ -47,12 +49,7 @@ public class RequestHandler {
     }
     
     private func handleProtocolsRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
-        let protocols: String =
-        "c:ping\0" +
-        "c:protocols\0" +
-        "c:server_port\0" +
-        "c:player_ping\0" +
-        "c:player_profiles_list\0"
+        let protocols: String = Array(handlers.keys).joined(separator: "\0")
         return .init(status: 0, data: protocols.data(using: .ascii)!)
     }
     
