@@ -76,7 +76,26 @@ public final class ScaffoldingServer {
             }
             connection.start(queue: Scaffolding.connectQueue)
         }
-        listener.start(queue: Scaffolding.connectQueue)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            @Sendable func finish(_ result: Result<Void, Error>) {
+                listener.stateUpdateHandler = nil
+                continuation.resume(with: result)
+            }
+            
+            listener.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    finish(.success(()))
+                case .failed(let error):
+                    finish(.failure(error))
+                case .cancelled:
+                    finish(.failure(ConnectionError.cancelled))
+                default:
+                    break
+                }
+            }
+            listener.start(queue: Scaffolding.connectQueue)
+        }
     }
     
     /// 创建 EasyTier 网络。
