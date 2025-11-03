@@ -51,7 +51,7 @@ public final class ScaffoldingServer {
     
     /// 启动连接监听器。
     public func startListener() async throws {
-        listener = try NWListener(using: .tcp, on: 13448)
+        listener = try NWListener(using: .tcp, on: 13452)
         listener.newConnectionHandler = { connection in
             connection.stateUpdateHandler = { [weak self] state in
                 guard let self = self else { return }
