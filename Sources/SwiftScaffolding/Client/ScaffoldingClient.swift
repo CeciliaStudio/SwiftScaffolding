@@ -93,7 +93,9 @@ public final class ScaffoldingClient {
             buf.writeData(try encoder.encode(player))
         }
         let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list").data)
-        self.room.members = memberList
+        await MainActor.run {
+            self.room.members = memberList
+        }
     }
     
     /// 退出房间并关闭连接。
