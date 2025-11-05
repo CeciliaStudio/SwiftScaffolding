@@ -14,20 +14,31 @@ public final class ConnectionUtil {
     ///   - connection: 目标连接。
     ///   - length: 数据长度。
     /// - Returns: 接收到的数据。
-    public static func receiveData(from connection: NWConnection, length: Int) async throws -> Data {
+    public static func receiveData(from connection: NWConnection, length: Int, timeout: Int = 10) async throws -> Data {
         if length == 0 { return Data() }
-        return try await withCheckedThrowingContinuation { continuation in
-            connection.receive(minimumIncompleteLength: length, maximumLength: length) { data, _, _, error in
-                if let error = error {
-                    continuation.resume(throwing: error)
-                    return
+        return try await withThrowingTaskGroup(of: Data.self) { group in
+            group.addTask {
+                try await withCheckedThrowingContinuation { continuation in
+                    connection.receive(minimumIncompleteLength: length, maximumLength: length) { data, _, _, error in
+                        if let error = error {
+                            continuation.resume(throwing: error)
+                            return
+                        }
+                        guard let data = data, data.count == length else {
+                            continuation.resume(throwing: ConnectionError.orderlyShutdown)
+                            return
+                        }
+                        continuation.resume(returning: data)
+                    }
                 }
-                guard let data = data, data.count == length else {
-                    continuation.resume(throwing: ConnectionError.orderlyShutdown)
-                    return
-                }
-                continuation.resume(returning: data)
             }
+            group.addTask {
+                try await Task.sleep(for: .seconds(timeout))
+                throw ConnectionError.timeout
+            }
+            let result = try await group.next()!
+            group.cancelAll()
+            return result
         }
     }
     
