@@ -65,6 +65,7 @@ public final class ScaffoldingClient {
             guard let node = try? easyTier.getPeerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
                 continue
             }
+            Logger.info("Found scaffolding server:", node.hostname)
             remoteIP = node.ipv4
             let port: String = String(node.hostname.dropFirst("scaffolding-mc-server-".count))
             try easyTier.addPortForward(bind: "127.0.0.1:\(port)", destination: "\(remoteIP!):\(port)")
@@ -128,13 +129,16 @@ public final class ScaffoldingClient {
                     break
                 }
             }
+            Logger.info("Connecting to scaffolding server...")
             connection.start(queue: Scaffolding.connectQueue)
         }
+        Logger.info("Connected to scaffolding server")
         room = Room(members: [], serverPort: 0)
         try await heartbeat()
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
         try easyTier.addPortForward(bind: "127.0.0.1:\(serverPort)", destination: "\(remoteIP!):\(serverPort)")
         room.serverPort = serverPort
+        Logger.info("Minecraft server ready:", "127.0.0.1:\(serverPort)")
     }
     
     private func assertReady() throws {

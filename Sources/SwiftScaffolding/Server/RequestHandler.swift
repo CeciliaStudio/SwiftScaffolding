@@ -50,7 +50,7 @@ public class RequestHandler {
     
     private func handleProtocolsRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
         let protocols: String = Array(handlers.keys).joined(separator: "\0")
-        return .init(status: 0, data: protocols.data(using: .ascii)!)
+        return .init(status: 0, data: protocols.data(using: .utf8)!)
     }
     
     private func handleServerPortRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {

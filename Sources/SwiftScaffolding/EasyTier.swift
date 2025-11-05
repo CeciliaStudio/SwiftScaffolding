@@ -31,6 +31,7 @@ public final class EasyTier {
     /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: String...) throws {
         kill()
+        Logger.info("Launching easytier-core with", args)
         let process: Process = Process()
         process.executableURL = coreURL
         process.arguments = args
@@ -104,6 +105,7 @@ extension EasyTier {
     ///   - destination: 目标地址。
     public func addPortForward(protocol: String = "tcp", bind: String, destination: String) throws {
         try callCLI("port-forward", "add", `protocol`, bind, destination)
+        Logger.info("\(destination) is bound to \(bind)")
     }
     
     /// 移除端口转发规则。

@@ -16,7 +16,6 @@ public final class ScaffoldingServer {
     private let easyTier: EasyTier
     private var listener: NWListener!
     private var handler: RequestHandler!
-    private var errorHandler: ErrorHandler?
     private var connections: [NWConnection] = []
     
     /// 使用指定的 EasyTier 创建联机中心。
@@ -26,14 +25,12 @@ public final class ScaffoldingServer {
     ///   - playerName: 玩家名。
     ///   - vendor: 联机客户端信息。
     ///   - serverPort: Minecraft 服务器端口号。
-    ///   - errorHandler: 异步错误处理对象。
     public init(
         easyTier: EasyTier,
         roomCode: String,
         playerName: String,
         vendor: String,
-        serverPort: UInt16,
-        errorHandler: ErrorHandler? = nil
+        serverPort: UInt16
     ) {
         self.room = Room(
             members: [.init(name: playerName, machineID: Scaffolding.getMachineID(), vendor: vendor, kind: .host)],
@@ -46,7 +43,6 @@ public final class ScaffoldingServer {
         self.encoder.outputFormatting = .withoutEscapingSlashes
         self.decoder = JSONDecoder()
         self.handler = RequestHandler(server: self)
-        self.errorHandler = errorHandler
     }
     
     /// 启动连接监听器。
@@ -62,16 +58,20 @@ public final class ScaffoldingServer {
                         do {
                             try await self.startReceiving(from: connection)
                         } catch {
-                            self.errorHandler?.handle(error)
+                            Logger.error("An error occurred while receiving the request:", error)
                             connection.cancel()
                         }
                     }
-                case .failed, .cancelled:
-                    if let idx = self.connections.firstIndex(where: { $0 === connection }) {
-                        self.connections.remove(at: idx)
-                    }
+                    return
+                case .failed(let error):
+                    Logger.error("Failed to create connection:", error)
+                case .cancelled:
+                    Logger.info("Connection closed:", connection.endpoint.debugDescription)
                 default:
-                    break
+                    return
+                }
+                if let index = self.connections.firstIndex(where: { $0 === connection }) {
+                    self.connections.remove(at: index)
                 }
             }
             connection.start(queue: Scaffolding.connectQueue)
@@ -96,6 +96,7 @@ public final class ScaffoldingServer {
             }
             listener.start(queue: Scaffolding.connectQueue)
         }
+        Logger.info("ScaffoldingServer listener started at 127.0.0.1:13452")
     }
     
     /// 创建 EasyTier 网络。
@@ -145,7 +146,10 @@ public final class ScaffoldingServer {
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
             if let handler = handler {
                 let responseBuffer: ByteBuffer = .init()
-                guard try handler.handleRequest(type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else { return }
+                guard try handler.handleRequest(type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else {
+                    Logger.warn("Received unknown request: \(type)")
+                    return
+                }
                 connection.send(content: responseBuffer.data, completion: .idempotent)
             }
         }

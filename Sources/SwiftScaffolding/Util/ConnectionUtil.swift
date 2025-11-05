@@ -15,6 +15,7 @@ public final class ConnectionUtil {
     ///   - length: 数据长度。
     /// - Returns: 接收到的数据。
     public static func receiveData(from connection: NWConnection, length: Int) async throws -> Data {
+        if length == 0 { return Data() }
         return try await withCheckedThrowingContinuation { continuation in
             connection.receive(minimumIncompleteLength: length, maximumLength: length) { data, _, _, error in
                 if let error = error {
