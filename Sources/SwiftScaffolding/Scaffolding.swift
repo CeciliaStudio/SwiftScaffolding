@@ -11,7 +11,7 @@ import CryptoKit
 import Network
 
 public final class Scaffolding {
-    internal static let connectQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.ScaffoldingClient.Connect")
+    internal static let connectQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.Connect")
     
     /// 根据设备的主板唯一标识符生成设备标识符。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id
