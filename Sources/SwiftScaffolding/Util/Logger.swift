@@ -19,11 +19,13 @@ public final class Logger {
     /// 开启日志输出。
     /// - Parameter url: 日志文件 `URL`。
     public static func enableLogging(url: URL) throws {
-        if !FileManager.default.fileExists(atPath: url.path) {
-            try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
-            FileManager.default.createFile(atPath: url.path, contents: nil)
+        if FileManager.default.fileExists(atPath: url.path) {
+            try FileManager.default.removeItem(at: url)
         }
+        try FileManager.default.createDirectory(at: url.deletingLastPathComponent(), withIntermediateDirectories: true)
+        FileManager.default.createFile(atPath: url.path, contents: nil)
         handle = try FileHandle(forWritingTo: url)
+        info("Logging is enabled. Log file path: \(url.path)")
     }
     
     private static func log(level: String, message: [Any]) {

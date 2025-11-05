@@ -62,15 +62,16 @@ public final class ScaffoldingServer {
                             connection.cancel()
                         }
                     }
-                case .failed, .cancelled:
-                    if case .failed(let error) = state {
-                        Logger.error("Failed to create connection:\n\(error)")
-                    }
-                    if let index = self.connections.firstIndex(where: { $0 === connection }) {
-                        self.connections.remove(at: index)
-                    }
+                    return
+                case .failed(let error):
+                    Logger.error("Failed to create connection:\n\(error)")
+                case .cancelled:
+                    Logger.info("Connection closed:", connection.endpoint.debugDescription)
                 default:
-                    break
+                    return
+                }
+                if let index = self.connections.firstIndex(where: { $0 === connection }) {
+                    self.connections.remove(at: index)
                 }
             }
             connection.start(queue: Scaffolding.connectQueue)
@@ -95,6 +96,7 @@ public final class ScaffoldingServer {
             }
             listener.start(queue: Scaffolding.connectQueue)
         }
+        Logger.info("ScaffoldingServer listener started at 127.0.0.1:13452")
     }
     
     /// 创建 EasyTier 网络。
@@ -139,6 +141,7 @@ public final class ScaffoldingServer {
             let typeLength: Int = Int(headerBuffer.readUInt8())
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
             guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
+            Logger.info(type)
             
             let bodyLength: Int = Int(headerBuffer.readUInt32())
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
