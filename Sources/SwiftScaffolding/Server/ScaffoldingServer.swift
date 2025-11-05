@@ -58,13 +58,13 @@ public final class ScaffoldingServer {
                         do {
                             try await self.startReceiving(from: connection)
                         } catch {
-                            Logger.error("An error occurred while receiving the request:\n\(error)")
+                            Logger.error("An error occurred while receiving the request:", error)
                             connection.cancel()
                         }
                     }
                     return
                 case .failed(let error):
-                    Logger.error("Failed to create connection:\n\(error)")
+                    Logger.error("Failed to create connection:", error)
                 case .cancelled:
                     Logger.info("Connection closed:", connection.endpoint.debugDescription)
                 default:
@@ -141,7 +141,6 @@ public final class ScaffoldingServer {
             let typeLength: Int = Int(headerBuffer.readUInt8())
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
             guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
-            Logger.info(type)
             
             let bodyLength: Int = Int(headerBuffer.readUInt32())
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)

@@ -105,6 +105,7 @@ extension EasyTier {
     ///   - destination: 目标地址。
     public func addPortForward(protocol: String = "tcp", bind: String, destination: String) throws {
         try callCLI("port-forward", "add", `protocol`, bind, destination)
+        Logger.info("\(destination) is bound to \(bind)")
     }
     
     /// 移除端口转发规则。

@@ -31,6 +31,7 @@ public final class Logger {
     private static func log(level: String, message: [Any]) {
         guard let handle = handle else { return }
         let line: String = "\(dateFormatter.string(from: Date())) \(level): \(message.map(String.init(describing:)).joined(separator: " "))\n"
+        print(line, terminator: "")
         guard let data = line.data(using: .utf8) else { return }
         logQueue.async {
             try? handle.write(contentsOf: data)
@@ -47,5 +48,8 @@ public final class Logger {
     
     internal static func error(_ message: Any...) {
         log(level: "ERROR", message: message)
+    }
+    
+    private init() {
     }
 }
