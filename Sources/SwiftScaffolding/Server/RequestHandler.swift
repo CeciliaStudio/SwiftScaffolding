@@ -60,7 +60,9 @@ public class RequestHandler {
     private func handlePlayerPingRequest(_ requestBody: ByteBuffer) throws -> Scaffolding.Response {
         let member: Member = try server.decoder.decode(Member.self, from: requestBody.data)
         if !server.room.members.contains(where: { $0.machineID == member.machineID }) {
-            server.room.members.append(member)
+            DispatchQueue.main.async {
+                self.server.room.members.append(member)
+            }
         }
         return .init(status: 0, data: Data())
     }
