@@ -11,7 +11,7 @@ public struct Member: Codable {
     /// 玩家名。
     public let name: String
     /// 玩家的 `machine_id`。
-    public let machineID: String
+    public let machineId: String
     /// 玩家的联机客户端信息。
     public let vendor: String
     /// 玩家类型。
@@ -24,7 +24,7 @@ public struct Member: Codable {
     
     public enum CodingKeys: String, CodingKey {
         case name
-        case machineID = "machine_id"
+        case machineId = "machine_id"
         case vendor
         case kind
     }
@@ -32,14 +32,14 @@ public struct Member: Codable {
     public init(from decoder: any Decoder) throws {
         let container = try decoder.container(keyedBy: CodingKeys.self)
         self.name = try container.decode(String.self, forKey: .name)
-        self.machineID = try container.decode(String.self, forKey: .machineID)
+        self.machineId = try container.decode(String.self, forKey: .machineId)
         self.vendor = try container.decode(String.self, forKey: .vendor)
         self.kind = try container.decodeIfPresent(Member.Kind.self, forKey: .kind) ?? .guest
     }
     
     public init(name: String, machineID: String, vendor: String, kind: Kind) {
         self.name = name
-        self.machineID = machineID
+        self.machineId = machineID
         self.vendor = vendor
         self.kind = kind
     }

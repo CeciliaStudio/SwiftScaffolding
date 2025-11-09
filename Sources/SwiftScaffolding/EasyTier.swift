@@ -31,7 +31,7 @@ public final class EasyTier {
     /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: String...) throws {
         kill()
-        Logger.info("Launching easytier-core with", args)
+        Logger.info("Launching easytier-core with \(args)")
         let process: Process = Process()
         process.executableURL = coreURL
         process.arguments = args

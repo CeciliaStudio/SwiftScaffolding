@@ -28,9 +28,9 @@ public final class Logger {
         info("Logging is enabled. Log file path: \(url.path)")
     }
     
-    private static func log(level: String, message: [Any]) {
+    private static func log(level: String, message: Any) {
         guard let handle = handle else { return }
-        let line: String = "\(dateFormatter.string(from: Date())) \(level): \(message.map(String.init(describing:)).joined(separator: " "))\n"
+        let line: String = "\(dateFormatter.string(from: Date())) \(level): \(message)\n"
         print(line, terminator: "")
         guard let data = line.data(using: .utf8) else { return }
         logQueue.async {
@@ -38,15 +38,15 @@ public final class Logger {
         }
     }
     
-    internal static func info(_ message: Any...) {
+    internal static func info(_ message: Any) {
         log(level: "INFO", message: message)
     }
     
-    internal static func warn(_ message: Any...) {
+    internal static func warn(_ message: Any) {
         log(level: "WARN", message: message)
     }
     
-    internal static func error(_ message: Any...) {
+    internal static func error(_ message: Any) {
         log(level: "ERROR", message: message)
     }
     

@@ -8,13 +8,13 @@
 import Foundation
 import Network
 
-public final class ConnectionUtil {
+internal final class ConnectionUtil {
     /// 从连接异步接收指定长度的数据。
     /// - Parameters:
     ///   - connection: 目标连接。
     ///   - length: 数据长度。
     /// - Returns: 接收到的数据。
-    public static func receiveData(from connection: NWConnection, length: Int, timeout: Int = 10) async throws -> Data {
+    public static func receiveData(from connection: NWConnection, length: Int) async throws -> Data {
         if length == 0 { return Data() }
         return try await withThrowingTaskGroup(of: Data.self) { group in
             group.addTask {
@@ -33,7 +33,7 @@ public final class ConnectionUtil {
                 }
             }
             group.addTask {
-                try await Task.sleep(for: .seconds(timeout))
+                try await Task.sleep(for: .seconds(10))
                 throw ConnectionError.timeout
             }
             let result = try await group.next()!

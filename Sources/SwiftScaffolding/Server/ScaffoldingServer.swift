@@ -9,10 +9,11 @@ import Foundation
 import Network
 
 public final class ScaffoldingServer {
-    public private(set) var room: Room
+    public let room: Room
     public let roomCode: String
     internal let encoder: JSONEncoder
     internal let decoder: JSONDecoder
+    internal var machineIdMap: [ObjectIdentifier: String] = [:]
     private let easyTier: EasyTier
     private var listener: NWListener!
     private var handler: RequestHandler!
@@ -49,6 +50,7 @@ public final class ScaffoldingServer {
     public func startListener() async throws {
         listener = try NWListener(using: .tcp, on: 13452)
         listener.newConnectionHandler = { connection in
+            Logger.info("New connection: \(connection.endpoint.debugDescription)")
             connection.stateUpdateHandler = { [weak self] state in
                 guard let self = self else { return }
                 switch state {
@@ -58,21 +60,19 @@ public final class ScaffoldingServer {
                         do {
                             try await self.startReceiving(from: connection)
                         } catch {
-                            Logger.error("An error occurred while receiving the request:", error)
+                            Logger.error("An error occurred while receiving the request: \(error)")
                             connection.cancel()
                         }
                     }
                     return
                 case .failed(let error):
-                    Logger.error("Failed to create connection:", error)
+                    Logger.error("Failed to create connection: \(error)")
                 case .cancelled:
-                    Logger.info("Connection closed:", connection.endpoint.debugDescription)
+                    Logger.info("Connection closed: \(connection.endpoint.debugDescription)")
                 default:
                     return
                 }
-                if let index = self.connections.firstIndex(where: { $0 === connection }) {
-                    self.connections.remove(at: index)
-                }
+                cleanup(connection)
             }
             connection.start(queue: Scaffolding.connectQueue)
         }
@@ -134,6 +134,22 @@ public final class ScaffoldingServer {
     
     
     
+    private func cleanup(_ connection: NWConnection) {
+        if let machineId = machineIdMap[ObjectIdentifier(connection)] {
+            DispatchQueue.main.async {
+                if let index = self.room.members.firstIndex(where: { $0.machineId == machineId }) {
+                    Logger.info("Removed player \(self.room.members[index].name) from the room")
+                    self.room.members.remove(at: index)
+                }
+            }
+            machineIdMap.removeValue(forKey: ObjectIdentifier(connection))
+        }
+        if let index = self.connections.firstIndex(where: { $0 === connection }) {
+            self.connections.remove(at: index)
+        }
+    }
+    
+    // 该方法只会在连接发生异常或连接断开时返回。
     private func startReceiving(from connection: NWConnection) async throws {
         while true {
             let headerBuffer: ByteBuffer = .init()
@@ -141,12 +157,13 @@ public final class ScaffoldingServer {
             let typeLength: Int = Int(headerBuffer.readUInt8())
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
             guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
+            Logger.info("Received \(type) request from \(connection.endpoint.debugDescription)")
             
             let bodyLength: Int = Int(headerBuffer.readUInt32())
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
             if let handler = handler {
                 let responseBuffer: ByteBuffer = .init()
-                guard try handler.handleRequest(type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else {
+                guard try handler.handleRequest(from: connection, type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else {
                     Logger.warn("Received unknown request: \(type)")
                     return
                 }
