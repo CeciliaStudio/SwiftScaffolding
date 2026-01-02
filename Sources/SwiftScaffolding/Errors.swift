@@ -13,7 +13,6 @@ public enum ConnectionError: Error {
     case cancelled
     case missingConnection
     case invalidConnectionState
-    case orderlyShutdown
 }
 
 public enum RoomCodeError: Error {

@@ -76,6 +76,7 @@ public class RequestHandler {
     }
     
     private func handlePlayerProfilesListRequest(_ connection: NWConnection, _ requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        print(String(data: try server.encoder.encode(server.room.members), encoding: .utf8)!)
         return .init(status: 0, data: try server.encoder.encode(server.room.members))
     }
 }

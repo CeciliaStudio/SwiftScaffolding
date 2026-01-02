@@ -9,28 +9,44 @@ import Foundation
 import SwiftyJSON
 
 public final class EasyTier {
-    /// `easytier-core` 的路径。
     private let coreURL: URL
-    
-    /// `easytier-cli` 的路径。
     private let cliURL: URL
-    
-    /// `easytier-core` 日志路径，为 `nil` 时不输出日志。
     private let logURL: URL?
+    private let options: [Option]
     
-    /// `easytier-core` 进程。
     public private(set) var process: Process?
+    private var rpcPort: UInt16?
     
-    public init(coreURL: URL, cliURL: URL, logURL: URL?) {
+    /// 创建一个 EasyTier 实例。
+    /// - Parameters:
+    ///   - coreURL: `easytier-core` 的路径。
+    ///   - cliURL: `easytier-cli` 的路径。
+    ///   - logURL: `easytier-core` 日志路径，为 `nil` 时不输出日志。
+    ///   - options: 启动时的选项。
+    public init(coreURL: URL, cliURL: URL, logURL: URL?, _ options: Option...) {
         self.coreURL = coreURL
         self.cliURL = cliURL
         self.logURL = logURL
+        self.options = options
     }
     
     /// 启动 EasyTier。
     /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: String...) throws {
         kill()
+        guard let rpcPort: UInt16 = ConnectionUtil.getFreePort() else {
+            Logger.error("Failed to find a free port")
+            throw EasyTierError.unableToFindPort
+        }
+        self.rpcPort = rpcPort
+        Logger.info("RPC port: \(rpcPort)")
+        let rpcArgs: [String] = ["--rpc-portal", "\(rpcPort)", "--rpc-portal-whitelist", "127.0.0.1"]
+        let args: [String] = args + rpcArgs + options.flatMap { option in
+            switch option {
+            case .p2pOnly: ["--p2p-only"]
+            case .peer(let address): ["-p", address]
+            }
+        }
         Logger.info("Launching easytier-core with \(args)")
         let process: Process = Process()
         process.executableURL = coreURL
@@ -65,9 +81,10 @@ public final class EasyTier {
     /// - Returns: 调用结果，不是 JSON 时为 `nil`。
     @discardableResult
     public func callCLI(_ args: String...) throws -> JSON? {
+        guard let rpcPort = self.rpcPort else { throw EasyTierError.unableToFindPort }
         let process: Process = Process()
         process.executableURL = cliURL
-        process.arguments = ["--output", "json"] + args
+        process.arguments = ["--rpc-portal", "127.0.0.1:\(rpcPort)", "--output", "json"] + args
         
         let output: Pipe = Pipe()
         let error: Pipe = Pipe()
@@ -89,11 +106,21 @@ public final class EasyTier {
     
     
     public enum EasyTierError: Error {
-        /// `easytier-core` 进程已存在。
-        case processAlreadyExists
-        
         /// `easytier-cli` 报错。
         case cliError(message: String)
+        
+        /// 未能找到可用的 RPC 端口。
+        case unableToFindPort
+    }
+    
+    public enum Option {
+        /// 是否开启仅 P2P 模式，不转发流量。
+        /// `--p2p-only`
+        case p2pOnly
+        
+        /// 最初要连接的对等节点。
+        /// `-p`, `${address}`
+        case peer(address: String)
     }
 }
 
@@ -119,7 +146,7 @@ extension EasyTier {
     
     /// 获取当前连接的所有节点列表。
     /// - Returns: 包含所有已连接节点的 `Peer` 数组。
-    public func getPeerList() throws -> [Peer] {
+    public func peerList() throws -> [Peer] {
         let result: JSON = try callCLI("peer", "list")!
         return result.arrayValue.map { peer in
             return Peer(

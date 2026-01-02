@@ -61,7 +61,10 @@ public final class ScaffoldingServer {
                             try await self.startReceiving(from: connection)
                         } catch {
                             Logger.error("An error occurred while receiving the request: \(error)")
-                            connection.cancel()
+                            guard case ConnectionError.timeout = error else {
+                                connection.cancel()
+                                return
+                            }
                         }
                     }
                     return
@@ -115,14 +118,15 @@ public final class ScaffoldingServer {
             "--network-name", networkName,
             "--network-secret", networkSecret,
             "--hostname", "scaffolding-mc-server-\(port)",
-            "-p", "tcp://public.easytier.cn:11010",
-            "--tcp-whitelist=\(port)",
-            "--tcp-whitelist=\(room.serverPort)"
+            "--tcp-whitelist", "\(port)",
+            "--tcp-whitelist", "\(room.serverPort)",
+            "--udp-whitelist", "0"
         )
     }
     
     /// 关闭房间并断开所有连接。
     public func stop() throws {
+        Logger.info("Stopping scaffolding server")
         easyTier.kill()
         listener.cancel()
         for connection in connections {

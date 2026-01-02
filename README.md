@@ -24,9 +24,10 @@ RoomCode.isValid(code: 房间码)
 创建 `EasyTier` 实例：
 ```swift
 let easyTier: EasyTier = EasyTier(
-    coreURL: URL(filePath: "/usr/bin/easytier-core"), // easytier-core 的路径
-    cliURL: URL(filePath: "/usr/bin/easytier-cli"), // easytier-cli 的路径
-    logURL: URL(filePath: "/tmp/easytier.log") // easytier-core 日志文件，为 nil 时不保留日志
+    coreURL: URL(filePath: "/usr/local/bin/easytier-core"), // easytier-core 的路径
+    cliURL: URL(filePath: "/usr/local/bin/easytier-cli"), // easytier-cli 的路径
+    logURL: URL(filePath: "/tmp/easytier.log"), // easytier-core 日志文件，为 nil 时不保留日志
+    .p2pOnly, .peer("tcp://public.easytier.top:11010") // EasyTier 选项，具体作用见代码文档
 )
 ```
 
@@ -37,7 +38,7 @@ let easyTier: EasyTier = EasyTier(
 // 1. 创建联机客户端
 let client: ScaffoldingClient = ScaffoldingClient(
     easyTier: easyTier, // 使用的 EasyTier
-    playerName: "YiZhiMCQiu", // 玩家名
+    playerName: "AnemoFlower", // 玩家名
     vendor: "xxx launcher 1.0.0, EasyTier v2.4.5", // 联机客户端信息
     roomCode: "U/ZZZZ-ZZZZ-ZZZZ-ZZZZ" // 房间码
 )
@@ -61,7 +62,7 @@ Task {
 let server: ScaffoldingServer = ScaffoldingServer(
     easyTier: easyTier, // 使用的 EasyTier
     roomCode: RoomCode.generate(), // 房间码，需要符合 Scaffolding 规范，否则会在 createRoom() 中抛出错误
-    playerName: "MinecraftVenti", // 房主玩家名
+    playerName: "AnemoFlower", // 房主玩家名
     vendor: "xxx launcher 1.0.0, EasyTier v2.4.5", // *联机客户端*信息
     serverPort: 12345 // Minecraft 局域网服务器端口
 )
@@ -80,5 +81,4 @@ Task {
 开启日志输出并设置日志文件：
 ```swift
 try Logger.enableLogging(url: .homeDirectory.appending(path: "swift-scaffolding.log"))
-// 注意：日志不会写入到标准输出流
 ```
