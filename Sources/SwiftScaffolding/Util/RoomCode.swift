@@ -43,7 +43,8 @@ public final class RoomCode {
     /// - Parameter code: 房间码。
     /// - Returns: 一个布尔值，为 `true` 时代表该房间码符合 Scaffolding 规范。
     public static func isValid(code: String) -> Bool {
-        guard code.wholeMatch(of: #/^U\/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$/#) != nil else {
+        let pattern: String = #"^U\/[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}-[A-Z0-9]{4}$"#
+        guard let _ = code.range(of: pattern, options: .regularExpression) else {
             return false
         }
         let code: String = String(code.dropFirst(2))

@@ -61,7 +61,7 @@ public final class ScaffoldingClient {
             "--udp-whitelist", "0"
         )
         for _ in 0..<15 {
-            try await Task.sleep(for: .seconds(1))
+            try await Task.sleep(nanoseconds: 1_000_000_000)
             guard let node = try? easyTier.peerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
                 continue
             }
