@@ -31,9 +31,11 @@ public final class EasyTier {
     }
     
     /// 启动 EasyTier。
-    /// - Parameter args: `easytier-core` 的参数。
-    public func launch(_ args: String...) throws {
-        kill()
+    /// - Parameters:
+    ///   - args: `easytier-core` 的参数。
+    ///   - terminationHandler: 进程退出回调，不会在正常 `terminate()` 时被调用。
+    public func launch(_ args: String..., terminationHandler: ((Process) -> Void)? = nil) throws {
+        terminate()
         guard let rpcPort: UInt16 = ConnectionUtil.getFreePort() else {
             Logger.error("Failed to find a free port")
             throw EasyTierError.unableToFindPort
@@ -64,15 +66,22 @@ public final class EasyTier {
             process.standardOutput = nil
             process.standardError = nil
         }
+        process.terminationHandler = { process in
+            self.process = nil
+            terminationHandler?(process)
+        }
         
         try process.run()
         self.process = process
     }
     
-    /// 杀死 `easytier-core` 进程。
-    public func kill() {
-        self.process?.terminate()
-        self.process = nil
+    /// 关闭 `easytier-core` 进程。
+    public func terminate() {
+        if let process = self.process {
+            process.terminationHandler = nil
+            process.terminate()
+            self.process = nil
+        }
     }
     
     /// 以 JSON 模式调用 `easytier-cli`。

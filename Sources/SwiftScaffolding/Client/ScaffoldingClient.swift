@@ -101,7 +101,7 @@ public final class ScaffoldingClient {
     /// 退出房间并关闭连接。
     public func stop() throws {
         Logger.info("Stopping scaffolding client")
-        easyTier.kill()
+        easyTier.terminate()
         connection.cancel()
     }
     

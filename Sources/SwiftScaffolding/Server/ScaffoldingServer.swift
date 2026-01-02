@@ -103,7 +103,8 @@ public final class ScaffoldingServer {
     }
     
     /// 创建 EasyTier 网络。
-    public func createRoom() throws {
+    /// - Parameter terminationHandler: 进程退出回调，不会在正常关闭时被调用。
+    public func createRoom(terminationHandler: ((Process) -> Void)? = nil) throws {
         guard let listener = listener,
               let port = listener.port?.debugDescription else {
             throw ConnectionError.invalidConnectionState
@@ -120,14 +121,18 @@ public final class ScaffoldingServer {
             "--hostname", "scaffolding-mc-server-\(port)",
             "--tcp-whitelist", "\(port)",
             "--tcp-whitelist", "\(room.serverPort)",
-            "--udp-whitelist", "0"
+            "--udp-whitelist", "0",
+            terminationHandler: { process in
+                self.stop()
+                terminationHandler?(process)
+            }
         )
     }
     
     /// 关闭房间并断开所有连接。
-    public func stop() throws {
+    public func stop() {
         Logger.info("Stopping scaffolding server")
-        easyTier.kill()
+        easyTier.terminate()
         listener.cancel()
         for connection in connections {
             connection.cancel()
