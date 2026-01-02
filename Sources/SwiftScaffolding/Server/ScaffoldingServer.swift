@@ -61,7 +61,10 @@ public final class ScaffoldingServer {
                             try await self.startReceiving(from: connection)
                         } catch {
                             Logger.error("An error occurred while receiving the request: \(error)")
-                            connection.cancel()
+                            guard case ConnectionError.timeout = error else {
+                                connection.cancel()
+                                return
+                            }
                         }
                     }
                     return
@@ -115,7 +118,6 @@ public final class ScaffoldingServer {
             "--network-name", networkName,
             "--network-secret", networkSecret,
             "--hostname", "scaffolding-mc-server-\(port)",
-            "-p", "tcp://public.easytier.cn:11010",
             "--tcp-whitelist=\(port)",
             "--tcp-whitelist=\(room.serverPort)"
         )

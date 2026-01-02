@@ -25,7 +25,7 @@ internal final class ConnectionUtil {
                             return
                         }
                         guard let data = data, data.count == length else {
-                            continuation.resume(throwing: ConnectionError.orderlyShutdown)
+                            continuation.resume(throwing: ConnectionError.cancelled)
                             return
                         }
                         continuation.resume(returning: data)
@@ -34,6 +34,7 @@ internal final class ConnectionUtil {
             }
             group.addTask {
                 try await Task.sleep(for: .seconds(10))
+                connection.cancel()
                 throw ConnectionError.timeout
             }
             let result = try await group.next()!

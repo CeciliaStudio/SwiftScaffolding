@@ -9,28 +9,37 @@ import Foundation
 import SwiftyJSON
 
 public final class EasyTier {
-    /// `easytier-core` 的路径。
     private let coreURL: URL
-    
-    /// `easytier-cli` 的路径。
     private let cliURL: URL
-    
-    /// `easytier-core` 日志路径，为 `nil` 时不输出日志。
     private let logURL: URL?
+    private let options: [Option]
     
     /// `easytier-core` 进程。
     public private(set) var process: Process?
     
-    public init(coreURL: URL, cliURL: URL, logURL: URL?) {
+    /// 创建一个 EasyTier 实例。
+    /// - Parameters:
+    ///   - coreURL: `easytier-core` 的路径。
+    ///   - cliURL: `easytier-cli` 的路径。
+    ///   - logURL: `easytier-core` 日志路径，为 `nil` 时不输出日志。
+    ///   - options: 启动时的选项。
+    public init(coreURL: URL, cliURL: URL, logURL: URL?, _ options: Option...) {
         self.coreURL = coreURL
         self.cliURL = cliURL
         self.logURL = logURL
+        self.options = options
     }
     
     /// 启动 EasyTier。
     /// - Parameter args: `easytier-core` 的参数。
     public func launch(_ args: String...) throws {
         kill()
+        let args: [String] = args + options.flatMap { option in
+            switch option {
+            case .p2pOnly: ["--p2p-only"]
+            case .peer(let address): ["-p", address]
+            }
+        }
         Logger.info("Launching easytier-core with \(args)")
         let process: Process = Process()
         process.executableURL = coreURL
@@ -95,6 +104,11 @@ public final class EasyTier {
         /// `easytier-cli` 报错。
         case cliError(message: String)
     }
+    
+    public enum Option {
+        case p2pOnly
+        case peer(address: String)
+    }
 }
 
 extension EasyTier {
@@ -119,7 +133,7 @@ extension EasyTier {
     
     /// 获取当前连接的所有节点列表。
     /// - Returns: 包含所有已连接节点的 `Peer` 数组。
-    public func getPeerList() throws -> [Peer] {
+    public func peerList() throws -> [Peer] {
         let result: JSON = try callCLI("peer", "list")!
         return result.arrayValue.map { peer in
             return Peer(

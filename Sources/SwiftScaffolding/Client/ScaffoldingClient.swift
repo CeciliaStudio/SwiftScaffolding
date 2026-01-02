@@ -57,12 +57,11 @@ public final class ScaffoldingClient {
             "--no-tun", "-d",
             "--network-name", networkName,
             "--network-secret", networkSecret,
-            "-p", "tcp://public.easytier.cn:11010",
-            "--tcp-whitelist=0"
+            "--tcp-whitelist=0", "--udp-whitelist=0"
         )
         for _ in 0..<15 {
             try await Task.sleep(for: .seconds(1))
-            guard let node = try? easyTier.getPeerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
+            guard let node = try? easyTier.peerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
                 continue
             }
             Logger.info("Found scaffolding server: \(node.hostname)")
