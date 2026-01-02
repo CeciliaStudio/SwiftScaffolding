@@ -106,7 +106,12 @@ public final class EasyTier {
     }
     
     public enum Option {
+        /// 是否开启仅 P2P 模式，不转发流量。
+        /// `--p2p-only`
         case p2pOnly
+        
+        /// 最初要连接的对等节点。
+        /// `-p`, `${address}`
         case peer(address: String)
     }
 }
