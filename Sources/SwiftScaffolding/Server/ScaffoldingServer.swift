@@ -118,13 +118,15 @@ public final class ScaffoldingServer {
             "--network-name", networkName,
             "--network-secret", networkSecret,
             "--hostname", "scaffolding-mc-server-\(port)",
-            "--tcp-whitelist=\(port)",
-            "--tcp-whitelist=\(room.serverPort)"
+            "--tcp-whitelist", "\(port)",
+            "--tcp-whitelist", "\(room.serverPort)",
+            "--udp-whitelist", "0"
         )
     }
     
     /// 关闭房间并断开所有连接。
     public func stop() throws {
+        Logger.info("Stopping scaffolding server")
         easyTier.kill()
         listener.cancel()
         for connection in connections {

@@ -57,7 +57,8 @@ public final class ScaffoldingClient {
             "--no-tun", "-d",
             "--network-name", networkName,
             "--network-secret", networkSecret,
-            "--tcp-whitelist=0", "--udp-whitelist=0"
+            "--tcp-whitelist", "0",
+            "--udp-whitelist", "0"
         )
         for _ in 0..<15 {
             try await Task.sleep(for: .seconds(1))
@@ -99,6 +100,7 @@ public final class ScaffoldingClient {
     
     /// 退出房间并关闭连接。
     public func stop() throws {
+        Logger.info("Stopping scaffolding client")
         easyTier.kill()
         connection.cancel()
     }
