@@ -8,7 +8,7 @@
 import Foundation
 
 /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机房间码
-public final class RoomCode {
+public enum RoomCode {
     private static let charset: [Character] = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ".map { $0 }
     
     /// 生成符合 Scaffolding 规范的房间码。
@@ -58,8 +58,5 @@ public final class RoomCode {
             value %= 7
         }
         return value == 0
-    }
-    
-    private init() {
     }
 }

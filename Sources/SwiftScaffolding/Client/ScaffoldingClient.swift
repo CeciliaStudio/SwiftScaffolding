@@ -47,7 +47,7 @@ public final class ScaffoldingClient {
     /// 连接到房间。
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议
-    public func connect() async throws {
+    public func connect(terminationHandler: ((Process) -> Void)? = nil) async throws {
         guard RoomCode.isValid(code: roomCode) else {
             throw RoomCodeError.invalidRoomCode
         }
@@ -58,7 +58,8 @@ public final class ScaffoldingClient {
             "--network-name", networkName,
             "--network-secret", networkSecret,
             "--tcp-whitelist", "0",
-            "--udp-whitelist", "0"
+            "--udp-whitelist", "0",
+            terminationHandler: terminationHandler
         )
         for _ in 0..<15 {
             try await Task.sleep(nanoseconds: 1_000_000_000)
