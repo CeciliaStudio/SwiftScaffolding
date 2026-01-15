@@ -9,10 +9,10 @@ import Foundation
 import SwiftyJSON
 
 public final class EasyTier {
-    private let coreURL: URL
-    private let cliURL: URL
-    private let logURL: URL?
-    private let options: [Option]
+    public let coreURL: URL
+    public let cliURL: URL
+    public let logURL: URL?
+    public let options: [Option]
     
     public private(set) var process: Process?
     private var rpcPort: UInt16?
