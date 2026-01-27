@@ -11,6 +11,6 @@
 "ConnectionError.connectionClosed" = "连接被关闭。";
 "ConnectionError.connectionIsNotReady" = "连接未被建立，或者连接状态异常。";
 
-"RoomCodeError.invalidRoomCode" = "无效的房间码。"
+"RoomCodeError.invalidRoomCode" = "无效的房间码。";
 
-"EasyTierError.cliError" = "EasyTier CLI 返回了一个错误：%@"
+"EasyTierError.cliError" = "EasyTier CLI 返回了一个错误：%@";

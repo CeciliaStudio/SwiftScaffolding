@@ -11,6 +11,6 @@
 "ConnectionError.connectionClosed" = "The connection was closed.";
 "ConnectionError.connectionIsNotReady" = "The connection is not established, or the connection state is invalid.";
 
-"RoomCodeError.invalidRoomCode" = "The room code was invalid."
+"RoomCodeError.invalidRoomCode" = "The room code was invalid.";
 
-"EasyTierError.cliError" = "EasyTier CLI returned an error: %@"
+"EasyTierError.cliError" = "EasyTier CLI returned an error: %@";
