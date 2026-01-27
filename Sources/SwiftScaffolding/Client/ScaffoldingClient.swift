@@ -60,8 +60,8 @@ public final class ScaffoldingClient {
             "--tcp-whitelist", "0",
             "--udp-whitelist", "0",
             "--listeners", "0",
-            terminationHandler: { process in
-                self.stop()
+            terminationHandler: { [weak self] process in
+                self?.stop()
                 terminationHandler?(process)
             }
         )
