@@ -36,10 +36,7 @@ public final class EasyTier {
     ///   - terminationHandler: 进程退出回调，不会在正常 `terminate()` 时被调用。
     public func launch(_ args: String..., terminationHandler: ((Process) -> Void)? = nil) throws {
         terminate()
-        guard let rpcPort: UInt16 = ConnectionUtil.getFreePort() else {
-            Logger.error("Failed to find a free port")
-            throw EasyTierError.unableToFindPort
-        }
+        let rpcPort: UInt16 = try ConnectionUtil.getPort()
         self.rpcPort = rpcPort
         Logger.info("RPC port: \(rpcPort)")
         let rpcArgs: [String] = ["--rpc-portal", "\(rpcPort)", "--rpc-portal-whitelist", "127.0.0.1"]
@@ -90,7 +87,7 @@ public final class EasyTier {
     /// - Returns: 调用结果，不是 JSON 时为 `nil`。
     @discardableResult
     public func callCLI(_ args: String...) throws -> JSON? {
-        guard let rpcPort = self.rpcPort else { throw EasyTierError.unableToFindPort }
+        guard let rpcPort = self.rpcPort else { throw ConnectionError.failedToAllocatePort }
         let process: Process = Process()
         process.executableURL = cliURL
         process.arguments = ["--rpc-portal", "127.0.0.1:\(rpcPort)", "--output", "json"] + args
@@ -118,9 +115,6 @@ public final class EasyTier {
         /// `easytier-cli` 报错。
         case cliError(message: String)
         
-        /// 未能找到可用的 RPC 端口。
-        case unableToFindPort
-        
         public var errorDescription: String? {
             switch self {
             case .cliError(let message):
@@ -131,12 +125,6 @@ public final class EasyTier {
                         comment: "EasyTier CLI 报错"
                     ),
                     message
-                )
-            case .unableToFindPort:
-                return NSLocalizedString(
-                    "EasyTierError.unableToFindPort",
-                    bundle: .module,
-                    comment: "找不到可用端口"
                 )
             }
         }

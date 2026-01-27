@@ -43,30 +43,47 @@ internal enum ConnectionUtil {
         }
     }
     
-    /// 获取空闲端口。
-    /// - Returns: 一个 `UInt16?`，为 `nil` 时表示创建失败。
-    public static func getFreePort() -> UInt16? {
-        var addr: sockaddr_in = sockaddr_in()
-        addr.sin_len = __uint8_t(MemoryLayout<sockaddr_in>.size)
-        addr.sin_family = sa_family_t(AF_INET)
-        addr.sin_port = in_port_t(0).bigEndian
-        addr.sin_addr = in_addr(s_addr: inet_addr("127.0.0.1"))
-        
-        let fd: Int32 = socket(AF_INET, SOCK_STREAM, 0)
-        guard fd >= 0 else { return nil }
-        defer { close(fd) }
-        
-        guard withUnsafePointer(to: &addr, {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
-                bind(fd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+    /// 获取一个当前可绑定的本地端口号。
+    /// - Parameter preferredPort: 优先尝试的端口号，为 0 时由系统自动分配。
+    /// - Returns: 可用端口号，分配失败时返回 0。
+    public static func getPort(_ preferredPort: UInt16 = 0) throws -> UInt16 {
+        func tryBind(port: UInt16) -> UInt16? {
+            let sockfd: Int32 = socket(AF_INET, SOCK_STREAM, 0)
+            guard sockfd >= 0 else { return nil }
+            defer { close(sockfd) }
+            var addr = sockaddr_in(
+                sin_len: UInt8(MemoryLayout<sockaddr_in>.size),
+                sin_family: sa_family_t(AF_INET),
+                sin_port: port.bigEndian,
+                sin_addr: in_addr(s_addr: INADDR_ANY),
+                sin_zero: (0, 0, 0, 0, 0, 0, 0, 0)
+            )
+            let result = withUnsafePointer(to: &addr) {
+                $0.withMemoryRebound(to: sockaddr.self, capacity: 1) {
+                    bind(sockfd, $0, socklen_t(MemoryLayout<sockaddr_in>.size))
+                }
             }
-        }) == 0 else { return nil }
-        
-        var len: socklen_t = socklen_t(MemoryLayout<sockaddr_in>.size)
-        guard getsockname(fd, withUnsafeMutablePointer(to: &addr, {
-            $0.withMemoryRebound(to: sockaddr.self, capacity: 1) { $0 }
-        }), &len) == 0 else { return nil }
-        
-        return UInt16(bigEndian: addr.sin_port)
+            guard result == 0 else { return nil }
+            if port == 0 {
+                var usedAddr = addr
+                var len = socklen_t(MemoryLayout<sockaddr_in>.size)
+                getsockname(sockfd, withUnsafeMutablePointer(to: &usedAddr) {
+                    UnsafeMutableRawPointer($0).assumingMemoryBound(to: sockaddr.self)
+                }, &len)
+                return UInt16(bigEndian: usedAddr.sin_port)
+            }
+            return port
+        }
+        if preferredPort > 0 {
+            if let port = tryBind(port: preferredPort) {
+                return port
+            }
+            Logger.info("Local port \(preferredPort) is not usable, allocating a new one")
+        }
+        guard let port = tryBind(port: 0) else {
+            Logger.error("Failed to allocate port")
+            throw ConnectionError.failedToAllocatePort
+        }
+        return port
     }
 }

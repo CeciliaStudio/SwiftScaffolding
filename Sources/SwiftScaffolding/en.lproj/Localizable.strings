@@ -10,6 +10,7 @@
 "ConnectionError.timeout" = "Timeout occurred while receiving or establishing the connection.";
 "ConnectionError.connectionClosed" = "The connection was closed.";
 "ConnectionError.connectionIsNotReady" = "The connection is not established, or the connection state is invalid.";
+"ConnectionError.failedToAllocatePort" = "Failed to allocate port.";
 
 "RoomCodeError.invalidRoomCode" = "The room code was invalid.";
 
