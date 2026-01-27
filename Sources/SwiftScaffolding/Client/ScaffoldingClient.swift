@@ -59,7 +59,11 @@ public final class ScaffoldingClient {
             "--network-secret", networkSecret,
             "--tcp-whitelist", "0",
             "--udp-whitelist", "0",
-            terminationHandler: terminationHandler
+            "--listeners", "0",
+            terminationHandler: { process in
+                self.stop()
+                terminationHandler?(process)
+            }
         )
         do {
             for _ in 0..<15 {
@@ -111,7 +115,7 @@ public final class ScaffoldingClient {
     }
     
     /// 退出房间并关闭连接。
-    public func stop() throws {
+    public func stop() {
         Logger.info("Stopping scaffolding client")
         easyTier.terminate()
         connection.cancel()
