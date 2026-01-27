@@ -16,7 +16,7 @@ public final class ScaffoldingClient {
     private let player: Member
     private let roomCode: String
     private var connection: NWConnection!
-    private var remoteIP: String!
+    private var serverNodeIp: String!
     
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
     /// - Parameters:
@@ -61,19 +61,30 @@ public final class ScaffoldingClient {
             "--udp-whitelist", "0",
             terminationHandler: terminationHandler
         )
-        for _ in 0..<15 {
-            try await Task.sleep(nanoseconds: 1_000_000_000)
-            guard let node = try? easyTier.peerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
-                continue
+        do {
+            for _ in 0..<15 {
+                try await Task.sleep(nanoseconds: 1_000_000_000)
+                guard let node = try? easyTier.peerList().first(where: { $0.hostname.starts(with: "scaffolding-mc-server") }) else {
+                    continue
+                }
+                Logger.info("Found scaffolding server: \(node.hostname)")
+                let serverIp: String = node.ipv4
+                guard let serverPort: UInt16 = .init(node.hostname.dropFirst("scaffolding-mc-server-".count)) else {
+                    Logger.error("The scaffolding server port is invalid")
+                    throw ConnectionError.invalidPort
+                }
+                self.serverNodeIp = serverIp
+                
+                let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
+                try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverIp):\(serverPort)")
+                try await joinRoom(port: localPort)
+                return
             }
-            Logger.info("Found scaffolding server: \(node.hostname)")
-            remoteIP = node.ipv4
-            let port: String = String(node.hostname.dropFirst("scaffolding-mc-server-".count))
-            try easyTier.addPortForward(bind: "127.0.0.1:\(port)", destination: "\(remoteIP!):\(port)")
-            try await joinRoom(port: port)
-            return
+            throw ConnectionError.timeout
+        } catch {
+            easyTier.terminate()
+            throw error
         }
-        throw ConnectionError.timeout
     }
     
     /// 向联机中心发送请求。
@@ -108,12 +119,8 @@ public final class ScaffoldingClient {
     
     
     
-    private func joinRoom(port: String) async throws {
-        guard let port: NWEndpoint.Port = NWEndpoint.Port(port) else {
-            throw ConnectionError.invalidPort
-        }
-        
-        let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: port), using: .tcp)
+    private func joinRoom(port: UInt16) async throws {
+        let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: .init(integerLiteral: port)), using: .tcp)
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             @Sendable func finish(_ result: Result<Void, Error>) {
                 connection.stateUpdateHandler = nil
@@ -137,12 +144,14 @@ public final class ScaffoldingClient {
             connection.start(queue: Scaffolding.connectQueue)
         }
         Logger.info("Connected to scaffolding server")
+        
         room = Room(members: [], serverPort: 0)
         try await heartbeat()
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
-        try easyTier.addPortForward(bind: "127.0.0.1:\(serverPort)", destination: "\(remoteIP!):\(serverPort)")
-        room.serverPort = serverPort
-        Logger.info("Minecraft server ready: 127.0.0.1:\(serverPort)")
+        let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
+        try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverNodeIp!):\(serverPort)")
+        room.serverPort = localPort
+        Logger.info("Minecraft server ready: 127.0.0.1:\(localPort)")
     }
     
     private func assertReady() throws {

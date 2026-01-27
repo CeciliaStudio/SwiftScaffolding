@@ -48,7 +48,8 @@ public final class ScaffoldingServer {
     
     /// 启动连接监听器。
     public func startListener() async throws {
-        listener = try NWListener(using: .tcp, on: 13452)
+        let port: UInt16 = try ConnectionUtil.getPort(13452)
+        listener = try NWListener(using: .tcp, on: .init(integerLiteral: port))
         listener.newConnectionHandler = { connection in
             Logger.info("New connection: \(connection.endpoint.debugDescription)")
             connection.stateUpdateHandler = { [weak self] state in
@@ -99,7 +100,7 @@ public final class ScaffoldingServer {
             }
             listener.start(queue: Scaffolding.connectQueue)
         }
-        Logger.info("ScaffoldingServer listener started at 127.0.0.1:13452")
+        Logger.info("ScaffoldingServer listener started at 127.0.0.1:\(port)")
     }
     
     /// 创建 EasyTier 网络。
