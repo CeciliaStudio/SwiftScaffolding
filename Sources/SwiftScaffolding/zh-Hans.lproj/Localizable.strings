@@ -1,0 +1,12 @@
+/* 
+  Localizable.strings
+  SwiftScaffolding
+
+  Created by 温迪 on 2026/1/27.
+  
+*/
+
+"ConnectionError.invalidPort" = "服务器返回了一个无效的端口号。";
+"ConnectionError.timeout" = "接收数据或建立连接时超时。";
+"ConnectionError.connectionClosed" = "连接被关闭。";
+"ConnectionError.connectionIsNotReady" = "连接未被建立，或者连接状态异常。";

@@ -1,0 +1,12 @@
+/* 
+  Localizable.strings
+  SwiftScaffolding
+
+  Created by 温迪 on 2026/1/27.
+  
+*/
+
+"ConnectionError.invalidPort" = "The server returned an invalid port number.";
+"ConnectionError.timeout" = "Timeout occurred while receiving or establishing the connection.";
+"ConnectionError.connectionClosed" = "The connection was closed.";
+"ConnectionError.connectionIsNotReady" = "The connection is not established, or the connection state is invalid.";
