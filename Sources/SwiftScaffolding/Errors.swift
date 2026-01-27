@@ -13,6 +13,7 @@ public enum ConnectionError: LocalizedError {
     case cancelled
     case missingConnection
     case invalidConnectionState
+    case failedToAllocatePort
     
     public var errorDescription: String? {
         switch self {
@@ -39,6 +40,12 @@ public enum ConnectionError: LocalizedError {
                 "ConnectionError.connectionIsNotReady",
                 bundle: Bundle.module,
                 comment: "未建立连接，或者连接状态异常"
+            )
+        case .failedToAllocatePort:
+            return NSLocalizedString(
+                "ConnectionError.failedToAllocatePort",
+                bundle: Bundle.module,
+                comment: "端口分配失败"
             )
         }
     }
