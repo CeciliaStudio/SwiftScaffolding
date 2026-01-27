@@ -123,6 +123,7 @@ public final class ScaffoldingServer {
             "--tcp-whitelist", "\(port)",
             "--tcp-whitelist", "\(room.serverPort)",
             "--udp-whitelist", "0",
+            "--listeners", "0",
             terminationHandler: { process in
                 self.stop()
                 terminationHandler?(process)
