@@ -123,7 +123,8 @@ public final class ScaffoldingServer {
             "--tcp-whitelist", "\(port)",
             "--tcp-whitelist", "\(room.serverPort)",
             "--udp-whitelist", "0",
-            "--listeners", "0",
+            "--listeners", "tcp://0.0.0.0:0",
+            "--listeners", "udp://0.0.0.0:0",
             terminationHandler: { [weak self] process in
                 self?.stop()
                 terminationHandler?(process)
@@ -135,7 +136,8 @@ public final class ScaffoldingServer {
     public func stop() {
         Logger.info("Stopping scaffolding server")
         easyTier.terminate()
-        listener.cancel()
+        listener?.cancel()
+        listener = nil
         for connection in connections {
             connection.cancel()
         }
