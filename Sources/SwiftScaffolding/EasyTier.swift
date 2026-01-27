@@ -63,8 +63,8 @@ public final class EasyTier {
             process.standardOutput = nil
             process.standardError = nil
         }
-        process.terminationHandler = { process in
-            self.process = nil
+        process.terminationHandler = { [weak self] process in
+            self?.process = nil
             terminationHandler?(process)
         }
         
