@@ -44,6 +44,14 @@ public enum ConnectionError: LocalizedError {
     }
 }
 
-public enum RoomCodeError: Error {
+public enum RoomCodeError: LocalizedError {
     case invalidRoomCode
+    
+    public var errorDescription: String? {
+        return NSLocalizedString(
+            "RoomCodeError.invalidRoomCode",
+            bundle: Bundle.module,
+            comment: "房间码无效"
+        )
+    }
 }

@@ -114,12 +114,32 @@ public final class EasyTier {
     }
     
     
-    public enum EasyTierError: Error {
+    public enum EasyTierError: LocalizedError {
         /// `easytier-cli` 报错。
         case cliError(message: String)
         
         /// 未能找到可用的 RPC 端口。
         case unableToFindPort
+        
+        public var errorDescription: String? {
+            switch self {
+            case .cliError(let message):
+                return String(
+                    format: NSLocalizedString(
+                        "EasyTierError.cliError",
+                        bundle: .module,
+                        comment: "EasyTier CLI 报错"
+                    ),
+                    message
+                )
+            case .unableToFindPort:
+                return NSLocalizedString(
+                    "EasyTierError.unableToFindPort",
+                    bundle: .module,
+                    comment: "找不到可用端口"
+                )
+            }
+        }
     }
     
     public enum Option {
