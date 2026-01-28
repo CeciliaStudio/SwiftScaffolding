@@ -141,8 +141,12 @@ public final class ScaffoldingClient {
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
         let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
         try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverNodeIp!):\(serverPort)")
+        guard try await Scaffolding.checkMinecraftServer(on: localPort) else {
+            Logger.error("Minecraft server check failed")
+            throw ConnectionError.invalidPort
+        }
         room.serverPort = localPort
-        Logger.info("Minecraft server ready: 127.0.0.1:\(localPort)")
+        Logger.info("Minecraft server is ready: 127.0.0.1:\(localPort)")
     }
     
     private func assertReady() throws {
