@@ -19,6 +19,12 @@ public final class ScaffoldingServer {
     private var handler: RequestHandler!
     private var connections: [NWConnection] = []
     
+    deinit {
+        Logger.debug("ScaffoldingServer is being deallocated")
+        listener?.cancel()
+        easyTier.terminate()
+    }
+    
     /// 使用指定的 EasyTier 创建联机中心。
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。

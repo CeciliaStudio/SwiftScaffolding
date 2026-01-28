@@ -50,6 +50,10 @@ public final class Logger {
         log(level: "ERROR", message: message)
     }
     
+    internal static func debug(_ message: Any) {
+        log(level: "DEBUG", message: message)
+    }
+    
     private init() {
     }
 }
