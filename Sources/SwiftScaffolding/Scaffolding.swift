@@ -96,19 +96,24 @@ public final class Scaffolding {
     }
     
     /// 检查本地指定端口是否存在一个 Minecraft 服务器。
-    /// - Parameter port: 服务器端口。
-    public static func checkMinecraftServer(on port: UInt16) async throws -> Bool {
-        let connection: NWConnection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            connection.send(content: [0xFE], completion: .contentProcessed { error in
-                if let error {
-                    continuation.resume(throwing: error)
-                } else {
-                    continuation.resume(returning: ())
-                }
-            })
+    /// - Parameters:
+    ///   - port: 服务器端口。
+    public static func checkMinecraftServer(on port: UInt16, timeout: Double = 10) async -> Bool {
+        do {
+            let connection: NWConnection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port, timeout: timeout)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                connection.send(content: [0xFE], completion: .contentProcessed { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(returning: ())
+                    }
+                })
+            }
+            return try await ConnectionUtil.receiveData(from: connection, length: 1)[0] == 0xFF
+        } catch {
+            return false
         }
-        return try await ConnectionUtil.receiveData(from: connection, length: 1)[0] == 0xFF
     }
     
     public final class Response {

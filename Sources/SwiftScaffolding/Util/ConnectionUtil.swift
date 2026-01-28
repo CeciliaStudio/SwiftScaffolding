@@ -39,6 +39,7 @@ internal enum ConnectionUtil {
                 }
             }
             Scaffolding.networkQueue.asyncAfter(deadline: .now() + timeout) {
+                if connection.stateUpdateHandler == nil { return }
                 connection.cancel()
                 finish(with: .failure(ConnectionError.timeout))
             }
