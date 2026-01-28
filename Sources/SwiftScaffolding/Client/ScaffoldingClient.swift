@@ -176,6 +176,7 @@ public final class ScaffoldingClient {
         }
         guard let rawProtocols: String = response.text else {
             Logger.error("Failed to parse c:protocols response")
+            self.serverProtocols = []
             return
         }
         self.serverProtocols = rawProtocols.split(separator: "\0").map(String.init)

@@ -41,7 +41,7 @@ internal enum ConnectionUtil {
             Task {
                 try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
                 await once.run {
-                    finish(with: .failure(ConnectionError.timeout))
+                    continuation.resume(throwing: ConnectionError.timeout)
                 }
             }
             connection.start(queue: Scaffolding.networkQueue)
@@ -76,7 +76,7 @@ internal enum ConnectionUtil {
             Task {
                 try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
                 await once.run {
-                    finish(with: .failure(ConnectionError.timeout))
+                    continuation.resume(throwing: ConnectionError.timeout)
                 }
             }
         }
