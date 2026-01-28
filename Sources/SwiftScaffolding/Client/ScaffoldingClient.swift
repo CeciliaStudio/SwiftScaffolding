@@ -18,6 +18,12 @@ public final class ScaffoldingClient {
     private var connection: NWConnection!
     private var serverNodeIp: String!
     
+    deinit {
+        Logger.debug("ScaffoldingClient is being deallocated")
+        connection?.cancel()
+        easyTier.terminate()
+    }
+    
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
