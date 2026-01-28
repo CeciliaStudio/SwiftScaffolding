@@ -65,6 +65,7 @@ public final class EasyTier {
         }
         process.terminationHandler = { [weak self] process in
             self?.process = nil
+            Logger.error("EasyTier crashed")
             terminationHandler?(process)
         }
         

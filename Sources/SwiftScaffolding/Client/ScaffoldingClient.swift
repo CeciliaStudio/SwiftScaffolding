@@ -10,6 +10,8 @@ import Network
 
 public final class ScaffoldingClient {
     public private(set) var room: Room!
+    /// 服务端支持的协议列表。
+    public private(set) var serverProtocols: [String]!
     private let easyTier: EasyTier
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
@@ -17,6 +19,7 @@ public final class ScaffoldingClient {
     private let roomCode: String
     private var connection: NWConnection!
     private var serverNodeIp: String!
+    private var protocols: [String]
     
     deinit {
         Logger.debug("ScaffoldingClient is being deallocated")
@@ -48,12 +51,16 @@ public final class ScaffoldingClient {
         self.encoder = .init()
         self.encoder.outputFormatting = .withoutEscapingSlashes
         self.decoder = .init()
+        
+        self.protocols = RequestHandler().protocols()
     }
     
     /// 连接到房间。
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议
-    public func connect(terminationHandler: ((Process) -> Void)? = nil) async throws {
+    /// - Parameters:
+    ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
+    public func connect(checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
         guard RoomCode.isValid(code: roomCode) else {
             throw RoomCodeError.invalidRoomCode
         }
@@ -88,7 +95,7 @@ public final class ScaffoldingClient {
                 
                 let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
                 try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverIp):\(serverPort)")
-                try await joinRoom(port: localPort)
+                try await joinRoom(port: localPort, checkServer: checkServer)
                 return
             }
             throw ConnectionError.timeout
@@ -129,24 +136,50 @@ public final class ScaffoldingClient {
         connection = nil
     }
     
+    /// 注册一个协议。
+    ///
+    /// 该协议会被包含在 `c:protocols` 发送的协议列表中。
+    /// - Parameter name: 协议名。
+    public func registerProtocol(_ name: String) {
+        self.protocols.append(name)
+    }
     
     
-    private func joinRoom(port: UInt16) async throws {
+    
+    private func joinRoom(port: UInt16, checkServer: Bool) async throws {
         Logger.info("Connecting to scaffolding server...")
         self.connection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
         Logger.info("Connected to scaffolding server")
         
         room = Room(members: [], serverPort: 0)
         try await heartbeat()
+        try await fetchProtocols()
+        
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
         let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
         try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverNodeIp!):\(serverPort)")
-        guard await Scaffolding.checkMinecraftServer(on: localPort) else {
-            Logger.error("Minecraft server check failed")
-            throw ConnectionError.invalidPort
+        
+        if checkServer {
+            guard await Scaffolding.checkMinecraftServer(on: localPort) else {
+                Logger.error("Minecraft server check failed")
+                throw ConnectionError.invalidPort
+            }
         }
+        
         room.serverPort = localPort
         Logger.info("Minecraft server is ready: 127.0.0.1:\(localPort)")
+    }
+    
+    private func fetchProtocols() async throws {
+        let response: Scaffolding.Response = try await sendRequest("c:protocols") { buf in
+            buf.writeData(protocols.joined(separator: "\0").data(using: .utf8)!)
+        }
+        guard let rawProtocols: String = response.text else {
+            Logger.error("Failed to parse c:protocols response")
+            self.serverProtocols = []
+            return
+        }
+        self.serverProtocols = rawProtocols.split(separator: "\0").map(String.init)
     }
     
     private func assertReady() throws {
