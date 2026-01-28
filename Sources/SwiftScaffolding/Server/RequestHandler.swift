@@ -10,11 +10,10 @@ import SwiftyJSON
 import Network
 
 public class RequestHandler {
-    private let server: ScaffoldingServer
+    var server: ScaffoldingServer!
     private var handlers: [String: (NWConnection, ByteBuffer) throws -> Scaffolding.Response] = [:]
     
-    internal init(server: ScaffoldingServer) {
-        self.server = server
+    internal init() {
         registerHandlers()
     }
     
@@ -26,20 +25,29 @@ public class RequestHandler {
         handlers[type] = handler
     }
     
+    /// 获取已注册的协议列表。
+    public func protocols() -> [String] {
+        return Array(handlers.keys)
+    }
+    
     internal func handleRequest(
         from connection: NWConnection,
         type: String,
         requestBody: ByteBuffer,
         responseBuffer: ByteBuffer
-    ) throws -> Bool {
+    ) throws {
         guard let handler = handlers[type] else {
-            return false
+            Logger.warn("Unknown request: \(type)")
+            responseBuffer.writeUInt8(255)
+            let message: String = "Unknown request"
+            responseBuffer.writeUInt32(UInt32(message.count))
+            responseBuffer.writeData(message.data(using: .utf8)!)
+            return
         }
         let response: Scaffolding.Response = try handler(connection, requestBody)
         responseBuffer.writeUInt8(response.status)
         responseBuffer.writeUInt32(UInt32(response.data.count))
         responseBuffer.writeData(response.data)
-        return true
     }
     
     private func registerHandlers() {

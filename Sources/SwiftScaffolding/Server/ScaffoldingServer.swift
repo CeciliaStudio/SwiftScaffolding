@@ -11,12 +11,12 @@ import Network
 public final class ScaffoldingServer {
     public let room: Room
     public let roomCode: String
+    public let handler: RequestHandler
     internal let encoder: JSONEncoder
     internal let decoder: JSONDecoder
     internal var machineIdMap: [ObjectIdentifier: String] = [:]
     private let easyTier: EasyTier
     private var listener: NWListener!
-    private var handler: RequestHandler!
     private var connections: [NWConnection] = []
     
     deinit {
@@ -49,7 +49,8 @@ public final class ScaffoldingServer {
         self.encoder = JSONEncoder()
         self.encoder.outputFormatting = .withoutEscapingSlashes
         self.decoder = JSONDecoder()
-        self.handler = RequestHandler(server: self)
+        self.handler = .init()
+        self.handler.server = self
     }
     
     /// 启动连接监听器。
@@ -148,7 +149,6 @@ public final class ScaffoldingServer {
             connection.cancel()
         }
         connections = []
-        handler = nil
     }
     
     
@@ -173,21 +173,23 @@ public final class ScaffoldingServer {
         while true {
             let headerBuffer: ByteBuffer = .init()
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: 1))
+            
             let typeLength: Int = Int(headerBuffer.readUInt8())
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
             guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
-            Logger.info("Received \(type) request from \(connection.endpoint.debugDescription)")
             
             let bodyLength: Int = Int(headerBuffer.readUInt32())
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
-            if let handler = handler {
-                let responseBuffer: ByteBuffer = .init()
-                guard try handler.handleRequest(from: connection, type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer) else {
-                    Logger.warn("Received unknown request: \(type)")
-                    return
-                }
-                connection.send(content: responseBuffer.data, completion: .idempotent)
+            
+            let responseBuffer: ByteBuffer = .init()
+            if handler.protocols().contains(type) {
+                Logger.info("Received \(type) request from \(connection.endpoint.debugDescription)")
+            } else {
+                Logger.info("Received unknown request: \(type)")
             }
+            
+            try handler.handleRequest(from: connection, type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer)
+            connection.send(content: responseBuffer.data, completion: .idempotent)
         }
     }
 }
