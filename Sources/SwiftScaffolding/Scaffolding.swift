@@ -11,7 +11,7 @@ import CryptoKit
 import Network
 
 public final class Scaffolding {
-    internal static let connectQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.Connect")
+    internal static let networkQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.Network")
     
     /// 根据设备的主板唯一标识符生成设备标识符。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id
@@ -49,7 +49,7 @@ public final class Scaffolding {
                     block()
                 }
             }
-            connectQueue.asyncAfter(deadline: .now() + 5) {
+            networkQueue.asyncAfter(deadline: .now() + 5) {
                 safeResume {
                     continuation.resume(throwing: ConnectionError.timeout)
                 }
@@ -93,6 +93,22 @@ public final class Scaffolding {
                 }
             }
         }
+    }
+    
+    /// 检查本地指定端口是否存在一个 Minecraft 服务器。
+    /// - Parameter port: 服务器端口。
+    public static func checkMinecraftServer(on port: UInt16) async throws -> Bool {
+        let connection: NWConnection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
+        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+            connection.send(content: [0xFE], completion: .contentProcessed { error in
+                if let error {
+                    continuation.resume(throwing: error)
+                } else {
+                    continuation.resume(returning: ())
+                }
+            })
+        }
+        return try await ConnectionUtil.receiveData(from: connection, length: 1)[0] == 0xFF
     }
     
     public final class Response {

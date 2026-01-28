@@ -132,29 +132,8 @@ public final class ScaffoldingClient {
     
     
     private func joinRoom(port: UInt16) async throws {
-        let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: .init(integerLiteral: port)), using: .tcp)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            @Sendable func finish(_ result: Result<Void, Error>) {
-                connection.stateUpdateHandler = nil
-                continuation.resume(with: result)
-            }
-            
-            connection.stateUpdateHandler = { [weak self] state in
-                switch state {
-                case .ready:
-                    self?.connection = connection
-                    finish(.success(()))
-                case .failed(let error):
-                    finish(.failure(error))
-                case .cancelled:
-                    finish(.failure(ConnectionError.cancelled))
-                default:
-                    break
-                }
-            }
-            Logger.info("Connecting to scaffolding server...")
-            connection.start(queue: Scaffolding.connectQueue)
-        }
+        Logger.info("Connecting to scaffolding server...")
+        self.connection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
         Logger.info("Connected to scaffolding server")
         
         room = Room(members: [], serverPort: 0)
@@ -162,8 +141,12 @@ public final class ScaffoldingClient {
         let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
         let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
         try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverNodeIp!):\(serverPort)")
+        guard try await Scaffolding.checkMinecraftServer(on: localPort) else {
+            Logger.error("Minecraft server check failed")
+            throw ConnectionError.invalidPort
+        }
         room.serverPort = localPort
-        Logger.info("Minecraft server ready: 127.0.0.1:\(localPort)")
+        Logger.info("Minecraft server is ready: 127.0.0.1:\(localPort)")
     }
     
     private func assertReady() throws {

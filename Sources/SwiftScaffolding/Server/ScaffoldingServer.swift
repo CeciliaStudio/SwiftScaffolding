@@ -84,7 +84,7 @@ public final class ScaffoldingServer {
                 }
                 cleanup(connection)
             }
-            connection.start(queue: Scaffolding.connectQueue)
+            connection.start(queue: Scaffolding.networkQueue)
         }
         try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
             @Sendable func finish(_ result: Result<Void, Error>) {
@@ -104,7 +104,7 @@ public final class ScaffoldingServer {
                     break
                 }
             }
-            listener.start(queue: Scaffolding.connectQueue)
+            listener.start(queue: Scaffolding.networkQueue)
         }
         Logger.info("ScaffoldingServer listener started at 127.0.0.1:\(port)")
     }
