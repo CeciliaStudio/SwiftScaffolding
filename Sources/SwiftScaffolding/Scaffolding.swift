@@ -110,7 +110,7 @@ public final class Scaffolding {
                     }
                 })
             }
-            return try await ConnectionUtil.receiveData(from: connection, length: 1)[0] == 0xFF
+            return try await ConnectionUtil.receiveData(from: connection, length: 1, timeout: timeout)[0] == 0xFF
         } catch {
             return false
         }

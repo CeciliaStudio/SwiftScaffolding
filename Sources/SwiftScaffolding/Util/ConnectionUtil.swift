@@ -38,10 +38,11 @@ internal enum ConnectionUtil {
                     break
                 }
             }
-            Scaffolding.networkQueue.asyncAfter(deadline: .now() + timeout) {
-                if connection.stateUpdateHandler == nil { return }
-                connection.cancel()
-                finish(with: .failure(ConnectionError.timeout))
+            Task {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                await once.run {
+                    finish(with: .failure(ConnectionError.timeout))
+                }
             }
             connection.start(queue: Scaffolding.networkQueue)
         }
@@ -72,9 +73,11 @@ internal enum ConnectionUtil {
                 finish(with: .success(data))
             }
             
-            Scaffolding.networkQueue.asyncAfter(deadline: .now() + timeout) {
-                connection.cancel()
-                finish(with: .failure(ConnectionError.timeout))
+            Task {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                await once.run {
+                    finish(with: .failure(ConnectionError.timeout))
+                }
             }
         }
     }
