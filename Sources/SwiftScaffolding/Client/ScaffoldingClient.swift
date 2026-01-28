@@ -132,29 +132,8 @@ public final class ScaffoldingClient {
     
     
     private func joinRoom(port: UInt16) async throws {
-        let connection: NWConnection = NWConnection(to: .hostPort(host: "127.0.0.1", port: .init(integerLiteral: port)), using: .tcp)
-        try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
-            @Sendable func finish(_ result: Result<Void, Error>) {
-                connection.stateUpdateHandler = nil
-                continuation.resume(with: result)
-            }
-            
-            connection.stateUpdateHandler = { [weak self] state in
-                switch state {
-                case .ready:
-                    self?.connection = connection
-                    finish(.success(()))
-                case .failed(let error):
-                    finish(.failure(error))
-                case .cancelled:
-                    finish(.failure(ConnectionError.cancelled))
-                default:
-                    break
-                }
-            }
-            Logger.info("Connecting to scaffolding server...")
-            connection.start(queue: Scaffolding.connectQueue)
-        }
+        Logger.info("Connecting to scaffolding server...")
+        self.connection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
         Logger.info("Connected to scaffolding server")
         
         room = Room(members: [], serverPort: 0)

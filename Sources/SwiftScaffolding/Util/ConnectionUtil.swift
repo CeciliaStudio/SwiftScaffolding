@@ -9,37 +9,72 @@ import Foundation
 import Network
 
 internal enum ConnectionUtil {
-    /// 从连接异步接收指定长度的数据。
+    /// 向目标地址创建一个 TCP 连接。
     /// - Parameters:
-    ///   - connection: 目标连接。
-    ///   - length: 数据长度。
-    /// - Returns: 接收到的数据。
-    public static func receiveData(from connection: NWConnection, length: Int) async throws -> Data {
-        if length == 0 { return Data() }
-        return try await withThrowingTaskGroup(of: Data.self) { group in
-            group.addTask {
-                try await withCheckedThrowingContinuation { continuation in
-                    connection.receive(minimumIncompleteLength: length, maximumLength: length) { data, _, _, error in
-                        if let error = error {
-                            continuation.resume(throwing: error)
-                            return
-                        }
-                        guard let data = data, data.count == length else {
-                            continuation.resume(throwing: ConnectionError.cancelled)
-                            return
-                        }
-                        continuation.resume(returning: data)
+    ///   - host: 目标地址。
+    ///   - port: 目标端口。
+    ///   - timeout: 超时时间。
+    public static func makeConnection(host: String, port: UInt16, timeout: Double = 10) async throws -> NWConnection {
+        let connection: NWConnection = NWConnection(to: .hostPort(host: .init(stringLiteral: host), port: .init(integerLiteral: port)), using: .tcp)
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<NWConnection, Error>) in
+            let once: Once = .init()
+            @Sendable func finish(with result: Result<NWConnection, Error>) {
+                Task {
+                    await once.run {
+                        connection.stateUpdateHandler = nil
+                        continuation.resume(with: result)
                     }
                 }
             }
-            group.addTask {
-                try await Task.sleep(nanoseconds: 10 * 1_000_000_000)
-                connection.cancel()
-                throw ConnectionError.timeout
+            connection.stateUpdateHandler = { state in
+                switch state {
+                case .ready:
+                    finish(with: .success(connection))
+                case .failed(let error):
+                    finish(with: .failure(error))
+                case .cancelled:
+                    finish(with: .failure(ConnectionError.cancelled))
+                default:
+                    break
+                }
             }
-            let result = try await group.next()!
-            group.cancelAll()
-            return result
+            Scaffolding.networkQueue.asyncAfter(deadline: .now() + timeout) {
+                connection.cancel()
+                finish(with: .failure(ConnectionError.timeout))
+            }
+            connection.start(queue: Scaffolding.networkQueue)
+        }
+    }
+    
+    public static func receiveData(from connection: NWConnection, length: Int, timeout: Double = 10) async throws -> Data {
+        if length == 0 { return Data() }
+        return try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Data, Error>) in
+            let once: Once = .init()
+            
+            @Sendable func finish(with result: Result<Data, Error>) {
+                Task {
+                    await once.run {
+                        continuation.resume(with: result)
+                    }
+                }
+            }
+            
+            connection.receive(minimumIncompleteLength: length, maximumLength: length) { (data: Data?, _: NWConnection.ContentContext?, _: Bool, error: NWError?) in
+                if let error: NWError = error {
+                    finish(with: .failure(error))
+                    return
+                }
+                guard let data: Data = data, data.count == length else {
+                    finish(with: .failure(ConnectionError.cancelled))
+                    return
+                }
+                finish(with: .success(data))
+            }
+            
+            Scaffolding.networkQueue.asyncAfter(deadline: .now() + timeout) {
+                connection.cancel()
+                finish(with: .failure(ConnectionError.timeout))
+            }
         }
     }
     
