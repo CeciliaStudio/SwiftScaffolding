@@ -31,6 +31,7 @@ public final class Scaffolding {
     public static func sendRequest(
         _ type: String,
         to connection: NWConnection,
+        timeout: Double = 5,
         body: (ByteBuffer) throws -> Void
     ) async throws -> Response {
         let buffer: ByteBuffer = ByteBuffer()
@@ -42,55 +43,49 @@ public final class Scaffolding {
         buffer.writeData(bodyBuffer.data)
         
         return try await withCheckedThrowingContinuation { continuation in
-            var didResume: Bool = false
-            func safeResume(_ block: () -> Void) {
-                if !didResume {
-                    didResume = true
-                    block()
-                }
-            }
-            networkQueue.asyncAfter(deadline: .now() + 5) {
-                safeResume {
-                    continuation.resume(throwing: ConnectionError.timeout)
+            let once: Once = .init()
+            func finish(with result: Result<Response, Error>) {
+                Task {
+                    await once.run {
+                        continuation.resume(with: result)
+                    }
                 }
             }
             connection.send(content: buffer.data, completion: .contentProcessed({ error in
                 if let error: NWError = error {
-                    safeResume { continuation.resume(throwing: error) }
+                    finish(with: .failure(error))
                 } else {
-                    receive(from: connection) { result in
-                        safeResume { continuation.resume(with: result) }
+                    receive(from: connection, timeout: timeout) { result in
+                        finish(with: result)
                     }
                 }
             }))
+            
+            Task {
+                try await Task.sleep(nanoseconds: UInt64(timeout * 1_000_000_000))
+                await once.run {
+                    continuation.resume(throwing: ConnectionError.timeout)
+                }
+            }
         }
     }
     
     
     
-    private static func receive(from connection: NWConnection, completion: @escaping (Result<Response, Error>) -> Void) {
-        connection.receive(minimumIncompleteLength: 5, maximumLength: 5) { data, context, isComplete, error in
-            if let error = error {
-                completion(.failure(error))
-                return
-            }
-            if let data = data {
-                let buffer: ByteBuffer = ByteBuffer(data: data)
-                let status: UInt8 = buffer.readUInt8()
-                let bodyLength: Int = Int(buffer.readUInt32())
+    private static func receive(from connection: NWConnection, timeout: Double = 10, completion: @escaping (Result<Response, Error>) -> Void) {
+        Task {
+            do {
+                let headerBuffer: ByteBuffer = .init(data: try await ConnectionUtil.receiveData(from: connection, length: 5, timeout: timeout))
+                let status: UInt8 = headerBuffer.readUInt8()
+                let bodyLength: Int = .init(headerBuffer.readUInt32())
                 if bodyLength == 0 {
-                    completion(.success(Response(status: status, data: Data())))
+                    completion(.success(.init(status: 0, data: .init())))
                     return
                 }
-                connection.receive(minimumIncompleteLength: bodyLength, maximumLength: bodyLength) { data, context, isComplete, error in
-                    if let error = error {
-                        completion(.failure(error))
-                        return
-                    }
-                    if let data = data {
-                        completion(.success(Response(status: status, data: data)))
-                    }
-                }
+                let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength, timeout: timeout)
+                completion(.success(.init(status: status, data: bodyData)))
+            } catch {
+                completion(.failure(error))
             }
         }
     }

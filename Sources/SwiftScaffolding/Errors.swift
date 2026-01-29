@@ -7,7 +7,7 @@
 
 import Foundation
 
-public enum ConnectionError: LocalizedError {
+public enum ConnectionError: LocalizedError, Equatable {
     case invalidPort
     case timeout
     case cancelled
@@ -51,14 +51,24 @@ public enum ConnectionError: LocalizedError {
     }
 }
 
-public enum RoomCodeError: LocalizedError {
+public enum RoomError: LocalizedError {
     case invalidRoomCode
+    case roomClosed
     
     public var errorDescription: String? {
-        return NSLocalizedString(
-            "RoomCodeError.invalidRoomCode",
-            bundle: Bundle.module,
-            comment: "房间码无效"
-        )
+        switch self {
+        case .invalidRoomCode:
+            return NSLocalizedString(
+                "RoomError.invalidRoomCode",
+                bundle: Bundle.module,
+                comment: "房间码无效"
+            )
+        case .roomClosed:
+            return NSLocalizedString(
+                "RoomError.roomClosed",
+                bundle: Bundle.module,
+                comment: "c:ping 超时"
+            )
+        }
     }
 }

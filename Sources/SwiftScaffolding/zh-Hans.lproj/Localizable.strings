@@ -12,6 +12,7 @@
 "ConnectionError.connectionIsNotReady" = "连接未被建立，或者连接状态异常。";
 "ConnectionError.failedToAllocatePort" = "端口分配失败。";
 
-"RoomCodeError.invalidRoomCode" = "无效的房间码。";
+"RoomError.invalidRoomCode" = "无效的房间码。";
+"RoomError.roomClosed" = "房间已被关闭，或者网络不稳定。";
 
 "EasyTierError.cliError" = "EasyTier CLI 返回了一个错误：%@";

@@ -12,6 +12,7 @@
 "ConnectionError.connectionIsNotReady" = "The connection is not established, or the connection state is invalid.";
 "ConnectionError.failedToAllocatePort" = "Failed to allocate port.";
 
-"RoomCodeError.invalidRoomCode" = "The room code was invalid.";
+"RoomError.invalidRoomCode" = "The room code was invalid.";
+"RoomError.roomClosed" = "The room has been closed, or the network is unstable.";
 
 "EasyTierError.cliError" = "EasyTier CLI returned an error: %@";
