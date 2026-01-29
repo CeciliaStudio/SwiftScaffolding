@@ -129,7 +129,7 @@ public final class ScaffoldingClient {
             } catch ConnectionError.timeout {
                 Logger.info("The room has been closed")
                 stop()
-                throw ConnectionError.cancelled
+                throw RoomError.roomClosed
             }
         }
         let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list").data)
