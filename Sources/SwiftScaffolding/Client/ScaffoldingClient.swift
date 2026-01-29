@@ -62,7 +62,7 @@ public final class ScaffoldingClient {
     ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
     public func connect(checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
         guard RoomCode.isValid(code: roomCode) else {
-            throw RoomCodeError.invalidRoomCode
+            throw RoomError.invalidRoomCode
         }
         let networkName: String = "scaffolding-mc-\(roomCode.dropFirst(2).prefix(9))"
         let networkSecret: String = String(roomCode.dropFirst(2).suffix(9))
@@ -111,16 +111,26 @@ public final class ScaffoldingClient {
     ///   - body: 请求体构造函数。
     /// - Returns: 联机中心的响应。
     @discardableResult
-    public func sendRequest(_ name: String, body: (ByteBuffer) throws -> Void = { _ in }) async throws -> Scaffolding.Response {
+    public func sendRequest(_ name: String, timeout: Double = 5, body: (ByteBuffer) throws -> Void = { _ in }) async throws -> Scaffolding.Response {
         try assertReady()
-        return try await Scaffolding.sendRequest(name, to: connection, body: body)
+        return try await Scaffolding.sendRequest(name, to: connection, timeout: timeout, body: body)
     }
     
     /// 发送 `c:player_ping` 请求并同步玩家列表。
     public func heartbeat() async throws {
-        try assertReady()
-        try await sendRequest("c:player_ping") { buf in
-            buf.writeData(try encoder.encode(player))
+        do {
+            try await sendRequest("c:player_ping") { buf in
+                buf.writeData(try encoder.encode(player))
+            }
+        } catch ConnectionError.timeout {
+            Logger.error("Timeout occurred while sending c:player_ping request")
+            do {
+                try await sendRequest("c:ping", timeout: 1)
+            } catch ConnectionError.timeout {
+                Logger.info("The room has been closed")
+                stop()
+                throw RoomError.roomClosed
+            }
         }
         let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list").data)
         await MainActor.run {

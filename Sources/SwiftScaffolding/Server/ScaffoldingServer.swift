@@ -28,7 +28,7 @@ public final class ScaffoldingServer {
     /// 使用指定的 EasyTier 创建联机中心。
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
-    ///   - roomCode: 房间码。若不合法，将在 `createRoom()` 中抛出 `RoomCodeError.invalidRoomCode` 错误。
+    ///   - roomCode: 房间码。若不合法，将在 `createRoom()` 中抛出 `RoomError.invalidRoomCode` 错误。
     ///   - playerName: 玩家名。
     ///   - vendor: 联机客户端信息。
     ///   - serverPort: Minecraft 服务器端口号。
@@ -118,7 +118,7 @@ public final class ScaffoldingServer {
             throw ConnectionError.invalidConnectionState
         }
         guard RoomCode.isValid(code: roomCode) else {
-            throw RoomCodeError.invalidRoomCode
+            throw RoomError.invalidRoomCode
         }
         let networkName: String = "scaffolding-mc-\(roomCode.dropFirst(2).prefix(9))"
         let networkSecret: String = String(roomCode.dropFirst(2).suffix(9))
