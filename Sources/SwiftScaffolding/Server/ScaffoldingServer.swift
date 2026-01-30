@@ -18,6 +18,7 @@ public final class ScaffoldingServer {
     private let easyTier: EasyTier
     private var listener: NWListener!
     private var connections: [NWConnection] = []
+    private var connectionTasks: [ObjectIdentifier: Task<Void, Never>] = [:]
     
     deinit {
         Logger.debug("ScaffoldingServer is being deallocated")
@@ -40,7 +41,7 @@ public final class ScaffoldingServer {
         serverPort: UInt16
     ) {
         self.room = Room(
-            members: [.init(name: playerName, machineID: Scaffolding.getMachineID(), vendor: vendor, kind: .host)],
+            members: [.init(name: playerName, machineID: Scaffolding.getMachineID(forHost: true), vendor: vendor, kind: .host)],
             serverPort: serverPort
         )
         self.easyTier = easyTier
@@ -63,18 +64,7 @@ public final class ScaffoldingServer {
                 guard let self = self else { return }
                 switch state {
                 case .ready:
-                    if !self.connections.contains(where: { $0 === connection }) { self.connections.append(connection) }
-                    Task {
-                        do {
-                            try await self.startReceiving(from: connection)
-                        } catch {
-                            Logger.error("An error occurred while receiving the request: \(error)")
-                            guard case ConnectionError.timeout = error else {
-                                connection.cancel()
-                                return
-                            }
-                        }
-                    }
+                    handleConnection(connection)
                     return
                 case .failed(let error):
                     Logger.error("Failed to create connection: \(error)")
@@ -83,7 +73,9 @@ public final class ScaffoldingServer {
                 default:
                     return
                 }
-                cleanup(connection)
+                Task { @MainActor in
+                    self.cleanup(connection)
+                }
             }
             connection.start(queue: Scaffolding.networkQueue)
         }
@@ -147,6 +139,9 @@ public final class ScaffoldingServer {
         listener = nil
         for connection in connections {
             connection.cancel()
+            DispatchQueue.main.async {
+                self.cleanup(connection)
+            }
         }
         connections = []
         handler.destroy()
@@ -154,24 +149,39 @@ public final class ScaffoldingServer {
     
     
     
+    @MainActor
     private func cleanup(_ connection: NWConnection) {
-        if let machineId = machineIdMap[ObjectIdentifier(connection)] {
-            DispatchQueue.main.async {
-                if let index = self.room.members.firstIndex(where: { $0.machineId == machineId }) {
-                    Logger.info("Removed player \(self.room.members[index].name) from the room")
-                    self.room.members.remove(at: index)
-                }
+        connection.stateUpdateHandler = nil
+        if connection.state != .cancelled { connection.cancel() }
+        let identifier: ObjectIdentifier = .init(connection)
+        
+        if let machineId = machineIdMap[identifier] {
+            self.room.members.removeAll(where: { $0.machineId == machineId })
+        }
+        
+        self.connectionTasks[identifier]?.cancel()
+        self.connectionTasks.removeValue(forKey: identifier)
+        self.connections.removeAll(where: { $0 === connection })
+    }
+    
+    private func handleConnection(_ connection: NWConnection) {
+        if !self.connections.contains(where: { $0 === connection }) { self.connections.append(connection) }
+        let task: Task<Void, Never> = Task.detached {
+            do {
+                try await self.startReceiving(from: connection)
+            } catch {
+                Logger.error("An error occurred while processing requests: \(error)")
             }
-            machineIdMap.removeValue(forKey: ObjectIdentifier(connection))
+            await MainActor.run {
+                self.cleanup(connection)
+            }
         }
-        if let index = self.connections.firstIndex(where: { $0 === connection }) {
-            self.connections.remove(at: index)
-        }
+        connectionTasks[ObjectIdentifier(connection)] = task
     }
     
     // 该方法只会在连接发生异常或连接断开时返回。
     private func startReceiving(from connection: NWConnection) async throws {
-        while true {
+        while !Task.isCancelled {
             let headerBuffer: ByteBuffer = .init()
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: 1))
             
@@ -183,9 +193,7 @@ public final class ScaffoldingServer {
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
             
             let responseBuffer: ByteBuffer = .init()
-            if handler.protocols().contains(type) {
-                Logger.info("Received \(type) request from \(connection.endpoint.debugDescription)")
-            } else {
+            if !handler.protocols().contains(type) {
                 Logger.info("Received unknown request: \(type)")
             }
             
