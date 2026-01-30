@@ -14,5 +14,6 @@
 
 "RoomError.invalidRoomCode" = "The room code was invalid.";
 "RoomError.roomClosed" = "The room has been closed, or the network is unstable.";
+"RoomError.playerInfoMismatch" = "Player information mismatch.";
 
 "EasyTierError.cliError" = "EasyTier CLI returned an error: %@";

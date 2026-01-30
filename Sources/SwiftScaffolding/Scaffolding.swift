@@ -16,9 +16,12 @@ public final class Scaffolding {
     /// 根据设备的主板唯一标识符生成设备标识符。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id
     /// - Returns: 设备标识符。
-    public static func getMachineID() -> String {
+    public static func getMachineID(forHost: Bool = false) -> String {
         let service: io_service_t = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
-        let uuid: String = IORegistryEntryCreateCFProperty(service, "IOPlatformUUID" as CFString, kCFAllocatorDefault, 0).takeUnretainedValue() as? String ?? UUID().uuidString
+        let uuid: String = (IORegistryEntryCreateCFProperty(service, "IOPlatformUUID" as CFString, kCFAllocatorDefault, 0)
+            .takeUnretainedValue() as? String ?? UUID().uuidString) + (forHost ? "HOST" : "")
+        
+        IOObjectRelease(service)
         return Insecure.SHA1.hash(data: Data(uuid.utf8)).map { String(format: "%02hhx", $0) }.joined()
     }
     

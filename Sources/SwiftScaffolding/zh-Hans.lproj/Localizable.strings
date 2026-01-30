@@ -14,5 +14,6 @@
 
 "RoomError.invalidRoomCode" = "无效的房间码。";
 "RoomError.roomClosed" = "房间已被关闭，或者网络不稳定。";
+"RoomError.playerInfoMismatch" = "玩家信息不一致。";
 
 "EasyTierError.cliError" = "EasyTier CLI 返回了一个错误：%@";

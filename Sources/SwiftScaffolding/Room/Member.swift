@@ -7,7 +7,7 @@
 
 import Foundation
 
-public struct Member: Codable {
+public struct Member: Codable, Hashable, Equatable {
     /// 玩家名。
     public let name: String
     /// 玩家的 `machine_id`。

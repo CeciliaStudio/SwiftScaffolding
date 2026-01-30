@@ -16,7 +16,6 @@ public final class ScaffoldingClient {
     private let encoder: JSONEncoder
     private let decoder: JSONDecoder
     private let player: Member
-    private let roomCode: String
     private var connection: NWConnection!
     private var serverNodeIp: String!
     private var protocols: [String]
@@ -32,12 +31,10 @@ public final class ScaffoldingClient {
     ///   - easyTier: 使用的 EasyTier。
     ///   - playerName: 玩家名。
     ///   - vendor: 联机客户端信息。
-    ///   - roomCode: 房间的房间码。
     public init(
         easyTier: EasyTier,
         playerName: String,
-        vendor: String,
-        roomCode: String
+        vendor: String
     ) {
         self.easyTier = easyTier
         self.player = .init(
@@ -46,7 +43,6 @@ public final class ScaffoldingClient {
             vendor: vendor,
             kind: .guest
         )
-        self.roomCode = roomCode
         
         self.encoder = .init()
         self.encoder.outputFormatting = .withoutEscapingSlashes
@@ -59,8 +55,9 @@ public final class ScaffoldingClient {
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
     /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议
     /// - Parameters:
+    ///   - roomCode: 房间码。
     ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
-    public func connect(checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
+    public func connect(to roomCode: String, checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
         guard RoomCode.isValid(code: roomCode) else {
             throw RoomError.invalidRoomCode
         }
@@ -103,6 +100,22 @@ public final class ScaffoldingClient {
             easyTier.terminate()
             throw error
         }
+    }
+    
+    /// 不使用 EasyTier，直接连接到本地联机大厅。
+    /// - Parameter port: 联机大厅端口号。
+    public func connectDirectly(port: UInt16) async throws {
+        Logger.info("Directly connecting to scaffolding server...")
+        self.connection = try await ConnectionUtil.makeConnection(host: "127.0.0.1", port: port)
+        Logger.info("Connected to scaffolding server")
+        
+        room = Room(members: [], serverPort: 0)
+        try await heartbeat()
+        try await fetchProtocols()
+        
+        let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
+        room.serverPort = serverPort
+        Logger.info("Minecraft server is ready: 127.0.0.1:\(serverPort)")
     }
     
     /// 向联机中心发送请求。

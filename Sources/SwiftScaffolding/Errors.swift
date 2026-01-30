@@ -54,6 +54,7 @@ public enum ConnectionError: LocalizedError, Equatable {
 public enum RoomError: LocalizedError {
     case invalidRoomCode
     case roomClosed
+    case playerInfoMismatch
     
     public var errorDescription: String? {
         switch self {
@@ -68,6 +69,12 @@ public enum RoomError: LocalizedError {
                 "RoomError.roomClosed",
                 bundle: Bundle.module,
                 comment: "c:ping 超时"
+            )
+        case .playerInfoMismatch:
+            return NSLocalizedString(
+                "RoomError.playerInfoMismatch",
+                bundle: Bundle.module,
+                comment: "两次 c:player_ping 发送的信息不一致"
             )
         }
     }

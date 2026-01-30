@@ -76,14 +76,41 @@ public class RequestHandler {
         
         registerHandler(for: "c:player_ping") { sender, requestBody in
             let connection: NWConnection = sender.connection
-            let member: Member = try self.server.decoder.decode(Member.self, from: requestBody.data)
-            Logger.info("Player info for \(connection.endpoint.debugDescription) is \(String(data: requestBody.data, encoding: .utf8)!)")
-            self.server.machineIdMap[ObjectIdentifier(connection)] = member.machineId
-            if !self.server.room.members.contains(where: { $0.machineId == member.machineId }) {
+            let rawMember: Member = try self.server.decoder.decode(Member.self, from: requestBody.data)
+            
+            let member: Member = .init(
+                name: rawMember.name,
+                machineID: rawMember.machineId,
+                vendor: rawMember.vendor,
+                kind: .guest
+            )
+            
+            let identifier: ObjectIdentifier = .init(connection)
+            
+            if self.server.machineIdMap[identifier] == nil
+                && self.server.machineIdMap.values.contains(member.machineId) {
+                Logger.warn("Detected a machine_id collision")
+                throw RoomError.playerInfoMismatch
+            }
+            if let machineId = self.server.machineIdMap[identifier], machineId != member.machineId {
+                Logger.warn("machine_id mismatch detected")
+                throw RoomError.playerInfoMismatch
+            }
+            
+            self.server.machineIdMap[identifier] = member.machineId
+            
+            if let storedMember: Member = self.server.room.members.first(where: { $0.machineId == member.machineId }) {
+                if storedMember != member {
+                    Logger.warn("Member info mismatch for \(storedMember.name)")
+                    throw RoomError.playerInfoMismatch
+                }
+            } else {
+                Logger.info("Received player info from \(connection.endpoint.debugDescription): { \"name\": \"\(member.name)\", \"vendor\": \"\(member.vendor)\", \"machine_id\": \"\(member.machineId)\"}")
                 DispatchQueue.main.async {
                     self.server.room.members.append(member)
                 }
             }
+            
             return .init(status: 0, data: Data())
         }
         
