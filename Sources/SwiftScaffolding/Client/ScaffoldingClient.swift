@@ -92,6 +92,7 @@ public final class ScaffoldingClient {
                 
                 let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
                 try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverIp):\(serverPort)")
+                try await Task.sleep(nanoseconds: 3_000_000_000)
                 try await joinRoom(port: localPort, checkServer: checkServer)
                 return
             }
@@ -137,6 +138,9 @@ public final class ScaffoldingClient {
             }
         } catch ConnectionError.timeout {
             Logger.error("Timeout occurred while sending c:player_ping request")
+            if room.members.isEmpty {
+                throw ConnectionError.timeout
+            }
             do {
                 try await sendRequest("c:ping", timeout: 1)
             } catch ConnectionError.timeout {

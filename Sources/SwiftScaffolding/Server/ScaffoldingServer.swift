@@ -157,6 +157,7 @@ public final class ScaffoldingServer {
         
         if let machineId = machineIdMap[identifier] {
             self.room.members.removeAll(where: { $0.machineId == machineId })
+            self.machineIdMap.removeValue(forKey: identifier)
         }
         
         self.connectionTasks[identifier]?.cancel()
@@ -198,7 +199,15 @@ public final class ScaffoldingServer {
             }
             
             try handler.handleRequest(from: connection, type: type, requestBody: .init(data: bodyData), responseBuffer: responseBuffer)
-            connection.send(content: responseBuffer.data, completion: .idempotent)
+            try await withCheckedThrowingContinuation { (continuation: CheckedContinuation<Void, Error>) in
+                connection.send(content: responseBuffer.data, completion: .contentProcessed { error in
+                    if let error {
+                        continuation.resume(throwing: error)
+                    } else {
+                        continuation.resume(returning: ())
+                    }
+                })
+            }
         }
     }
 }
