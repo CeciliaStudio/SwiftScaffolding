@@ -89,11 +89,11 @@ public class RequestHandler {
             
             if self.server.machineIdMap[identifier] == nil
                 && self.server.machineIdMap.values.contains(member.machineId) {
-                Logger.warn("machine_id collision occurred")
+                Logger.warn("Detected a machine_id collision")
                 throw RoomError.playerInfoMismatch
             }
             if let machineId = self.server.machineIdMap[identifier], machineId != member.machineId {
-                Logger.warn("machine_id mismatch")
+                Logger.warn("machine_id mismatch detected")
                 throw RoomError.playerInfoMismatch
             }
             
@@ -101,11 +101,11 @@ public class RequestHandler {
             
             if let storedMember: Member = self.server.room.members.first(where: { $0.machineId == member.machineId }) {
                 if storedMember != member {
-                    Logger.warn("Member info of \(storedMember.name) mismatch")
+                    Logger.warn("Member info mismatch for \(storedMember.name)")
                     throw RoomError.playerInfoMismatch
                 }
             } else {
-                Logger.info("Player info for \(connection.endpoint.debugDescription) is { \"name\": \"\(member.name)\", \"vendor\": \"\(member.vendor)\", \"machine_id\": \"\(member.machineId)\"}")
+                Logger.info("Received player info from \(connection.endpoint.debugDescription): { \"name\": \"\(member.name)\", \"vendor\": \"\(member.vendor)\", \"machine_id\": \"\(member.machineId)\"}")
                 DispatchQueue.main.async {
                     self.server.room.members.append(member)
                 }

@@ -170,7 +170,7 @@ public final class ScaffoldingServer {
             do {
                 try await self.startReceiving(from: connection)
             } catch {
-                Logger.error("An error occurred while processing requests: \(error)")
+                Logger.error("An error occurred while processing requests: \(error.localizedDescription)")
             }
             await MainActor.run {
                 self.cleanup(connection)
