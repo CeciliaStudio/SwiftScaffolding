@@ -11,7 +11,7 @@
 "ConnectionError.connectionClosed" = "连接被关闭。";
 "ConnectionError.connectionIsNotReady" = "连接未被建立，或者连接状态异常。";
 "ConnectionError.failedToAllocatePort" = "端口分配失败。";
-"ConnectionError.noEnoughBytes" = "对端未发送足够长的数据。";
+"ConnectionError.notEnoughBytes" = "对端未发送足够长的数据。";
 "ConnectionError.failedToDecodeString" = "解析字符串失败。";
 
 "RoomError.invalidRoomCode" = "无效的房间码。";

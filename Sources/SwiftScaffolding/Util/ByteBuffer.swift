@@ -33,11 +33,11 @@ public class ByteBuffer {
     /// - Returns: 长度为 `length` 字节的 `Data`
     public func readData(length: any BinaryInteger) throws -> Data {
         guard let intLength: Int = .init(exactly: length) else {
-            throw ConnectionError.noEnoughBytes
+            throw ConnectionError.notEnoughBytes
         }
         if intLength == 0 { return Data() }
         if index + intLength > data.count {
-            throw ConnectionError.noEnoughBytes
+            throw ConnectionError.notEnoughBytes
         }
         defer { index += intLength }
         return data.subdata(in: index..<index + intLength)
