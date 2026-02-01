@@ -113,7 +113,7 @@ public final class ScaffoldingClient {
         try await heartbeat()
         try await fetchProtocols()
         
-        let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
+        let serverPort: UInt16 = try await sendRequest("c:server_port").parse(using: { try $0.readUInt16() })
         room.serverPort = serverPort
         Logger.info("Minecraft server is ready: 127.0.0.1:\(serverPort)")
     }
@@ -178,7 +178,7 @@ public final class ScaffoldingClient {
         try await heartbeat()
         try await fetchProtocols()
         
-        let serverPort: UInt16 = ByteBuffer(data: try await sendRequest("c:server_port").data).readUInt16()
+        let serverPort: UInt16 = try await sendRequest("c:server_port").parse(using: { try $0.readUInt16() })
         let localPort: UInt16 = try ConnectionUtil.getPort(serverPort)
         try easyTier.addPortForward(bind: "127.0.0.1:\(localPort)", destination: "\(serverNodeIp!):\(serverPort)")
         

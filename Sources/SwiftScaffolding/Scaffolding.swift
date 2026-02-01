@@ -79,8 +79,8 @@ public final class Scaffolding {
         Task {
             do {
                 let headerBuffer: ByteBuffer = .init(data: try await ConnectionUtil.receiveData(from: connection, length: 5, timeout: timeout))
-                let status: UInt8 = headerBuffer.readUInt8()
-                let bodyLength: Int = .init(headerBuffer.readUInt32())
+                let status: UInt8 = try headerBuffer.readUInt8()
+                let bodyLength: Int = .init(try headerBuffer.readUInt32())
                 if bodyLength == 0 {
                     completion(.success(.init(status: 0, data: .init())))
                     return
@@ -137,6 +137,10 @@ public final class Scaffolding {
             let buffer: ByteBuffer = .init()
             body(buffer)
             self.data = buffer.data
+        }
+        
+        public func parse<T>(using parser: (ByteBuffer) throws -> T) rethrows -> T {
+            return try parser(ByteBuffer(data: data))
         }
     }
     

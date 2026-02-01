@@ -185,11 +185,11 @@ public final class ScaffoldingServer {
             let headerBuffer: ByteBuffer = .init()
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: 1))
             
-            let typeLength: Int = Int(headerBuffer.readUInt8())
+            let typeLength: Int = Int(try headerBuffer.readUInt8())
             headerBuffer.writeData(try await ConnectionUtil.receiveData(from: connection, length: typeLength + 4))
-            guard let type = String(data: headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
+            guard let type = String(data: try headerBuffer.readData(length: typeLength), encoding: .utf8) else { return }
             
-            let bodyLength: Int = Int(headerBuffer.readUInt32())
+            let bodyLength: Int = Int(try headerBuffer.readUInt32())
             let bodyData: Data = try await ConnectionUtil.receiveData(from: connection, length: bodyLength)
             
             let responseBuffer: ByteBuffer = .init()
