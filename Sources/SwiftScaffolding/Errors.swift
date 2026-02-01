@@ -57,7 +57,7 @@ public enum ConnectionError: LocalizedError, Equatable {
             )
         case .failedToDecodeString:
             return NSLocalizedString(
-                "ConnectionError.noEnoughBytes",
+                "ConnectionError.failedToDecodeString",
                 bundle: Bundle.module,
                 comment: "解析 UTF-8 字符串失败"
             )
