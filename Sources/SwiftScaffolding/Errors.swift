@@ -14,6 +14,8 @@ public enum ConnectionError: LocalizedError, Equatable {
     case missingConnection
     case invalidConnectionState
     case failedToAllocatePort
+    case notEnoughBytes
+    case failedToDecodeString
     
     public var errorDescription: String? {
         switch self {
@@ -46,6 +48,18 @@ public enum ConnectionError: LocalizedError, Equatable {
                 "ConnectionError.failedToAllocatePort",
                 bundle: Bundle.module,
                 comment: "端口分配失败"
+            )
+        case .notEnoughBytes:
+            return NSLocalizedString(
+                "ConnectionError.notEnoughBytes",
+                bundle: Bundle.module,
+                comment: "ByteBuffer 读取即将越界"
+            )
+        case .failedToDecodeString:
+            return NSLocalizedString(
+                "ConnectionError.failedToDecodeString",
+                bundle: Bundle.module,
+                comment: "解析 UTF-8 字符串失败"
             )
         }
     }

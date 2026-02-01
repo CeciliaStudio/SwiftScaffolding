@@ -31,34 +31,52 @@ public class ByteBuffer {
     /// 读取 `n` 个字节的数据
     /// - Parameter length: 读取的数据长度
     /// - Returns: 长度为 `length` 字节的 `Data`
-    public func readData(length: Int) -> Data {
-        if length == 0 { return Data() }
-        defer { index += length }
-        return data.subdata(in: index..<index + length)
+    public func readData(length: any BinaryInteger) throws -> Data {
+        guard let intLength: Int = .init(exactly: length) else {
+            throw ConnectionError.notEnoughBytes
+        }
+        if intLength == 0 { return Data() }
+        if index + intLength > data.count {
+            throw ConnectionError.notEnoughBytes
+        }
+        defer { index += intLength }
+        return data.subdata(in: index..<index + intLength)
     }
     
     /// 读取一个 `UInt8`
     /// - Returns: UInt8
-    public func readUInt8() -> UInt8 {
-        let data: Data = readData(length: 1)
+    public func readUInt8() throws -> UInt8 {
+        let data: Data = try readData(length: 1)
         let value: UInt8 = data.withUnsafeBytes { $0.load(as: UInt8.self) }
         return value
     }
     
     /// 读取一个 `UInt16`（大端序）
     /// - Returns: UInt16
-    public func readUInt16() -> UInt16 {
-        let data: Data = readData(length: 2)
+    public func readUInt16() throws -> UInt16 {
+        let data: Data = try readData(length: 2)
         let value: UInt16 = data.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
         return value
     }
     
     /// 读取一个 `UInt32`（大端序）
     /// - Returns: UInt32
-    public func readUInt32() -> UInt32 {
-        let data: Data = readData(length: 4)
+    public func readUInt32() throws -> UInt32 {
+        let data: Data = try readData(length: 4)
         let value: UInt32 = data.withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
         return value
+    }
+    
+    /// 读取一个 **UTF-8** 字符串。
+    ///
+    /// - Parameter length: 字符串长度。
+    public func readString(_ length: (any BinaryInteger)? = nil) throws -> String {
+        let length: any BinaryInteger = length ?? data.count
+        let data: Data = try readData(length: length)
+        guard let string: String = .init(data: data, encoding: .utf8) else {
+            throw ConnectionError.failedToDecodeString
+        }
+        return string
     }
     
     // MARK: - 写入
@@ -91,5 +109,11 @@ public class ByteBuffer {
         var v: UInt32 = value.bigEndian
         let d: Data = Data(bytes: &v, count: MemoryLayout<UInt32>.size)
         writeData(d)
+    }
+    
+    /// 写入一个 **UTF-8** 字符串。
+    public func writeString(_ str: String) {
+        let data: Data = str.data(using: .utf8)!
+        writeData(data)
     }
 }

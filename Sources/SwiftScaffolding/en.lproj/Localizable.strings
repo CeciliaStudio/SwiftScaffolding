@@ -11,6 +11,8 @@
 "ConnectionError.connectionClosed" = "The connection was closed.";
 "ConnectionError.connectionIsNotReady" = "The connection is not established, or the connection state is invalid.";
 "ConnectionError.failedToAllocatePort" = "Failed to allocate port.";
+"ConnectionError.notEnoughBytes" = "The peer did not send enough data.";
+"ConnectionError.failedToDecodeString" = "Failed to decode string.";
 
 "RoomError.invalidRoomCode" = "The room code was invalid.";
 "RoomError.roomClosed" = "The room has been closed, or the network is unstable.";

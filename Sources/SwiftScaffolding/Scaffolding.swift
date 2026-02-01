@@ -39,7 +39,7 @@ public final class Scaffolding {
     ) async throws -> Response {
         let buffer: ByteBuffer = ByteBuffer()
         buffer.writeUInt8(UInt8(type.count))
-        buffer.writeData(type.data(using: .utf8)!)
+        buffer.writeString(type)
         let bodyBuffer: ByteBuffer = ByteBuffer()
         try body(bodyBuffer)
         buffer.writeUInt32(UInt32(bodyBuffer.data.count))
@@ -79,8 +79,8 @@ public final class Scaffolding {
         Task {
             do {
                 let headerBuffer: ByteBuffer = .init(data: try await ConnectionUtil.receiveData(from: connection, length: 5, timeout: timeout))
-                let status: UInt8 = headerBuffer.readUInt8()
-                let bodyLength: Int = .init(headerBuffer.readUInt32())
+                let status: UInt8 = try headerBuffer.readUInt8()
+                let bodyLength: Int = .init(try headerBuffer.readUInt32())
                 if bodyLength == 0 {
                     completion(.success(.init(status: 0, data: .init())))
                     return
@@ -117,7 +117,6 @@ public final class Scaffolding {
     public final class Response {
         public let status: UInt8
         public let data: Data
-        public var text: String? { String(data: data, encoding: .utf8) }
         
         /// 根据响应状态码与响应体创建响应。
         /// - Parameters:
@@ -137,6 +136,10 @@ public final class Scaffolding {
             let buffer: ByteBuffer = .init()
             body(buffer)
             self.data = buffer.data
+        }
+        
+        public func parse<T>(using parser: (ByteBuffer) throws -> T) rethrows -> T {
+            return try parser(ByteBuffer(data: data))
         }
     }
     
