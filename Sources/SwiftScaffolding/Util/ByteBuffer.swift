@@ -13,14 +13,13 @@ public class ByteBuffer {
     
     // MARK: - 初始化
     
-    /// 构造一个 `ByteBuffer` 用于读取数据包内容
-    /// - Parameter data: 数据包内容
+    /// 构造一个 `ByteBuffer` 用于读取 `Data`。
     public init(data: Data) {
         self.data = data
         self.index = 0
     }
     
-    /// 构造一个 `ByteBuffer` 用于写入数据
+    /// 构造一个 `ByteBuffer` 用于写入数据。
     public init() {
         self.data = Data()
         self.index = 0
@@ -28,9 +27,11 @@ public class ByteBuffer {
     
     // MARK: - 读取
     
-    /// 读取 `n` 个字节的数据
-    /// - Parameter length: 读取的数据长度
-    /// - Returns: 长度为 `length` 字节的 `Data`
+    /// 读取 `n` 个字节的数据。
+    ///
+    /// - Parameter length: 读取的数据长度。
+    /// - Returns: 长度为 `length` 字节的 `Data`。
+    /// - Throws: 若剩余字节不足，抛出 `ConnectionError.notEnoughBytes` 错误。
     public func readData(length: any BinaryInteger) throws -> Data {
         guard let intLength: Int = .init(exactly: length) else {
             throw ConnectionError.notEnoughBytes
@@ -43,24 +44,27 @@ public class ByteBuffer {
         return data.subdata(in: index..<index + intLength)
     }
     
-    /// 读取一个 `UInt8`
-    /// - Returns: UInt8
+    /// 读取一个 `UInt8`。
+    ///
+    /// - Throws: 若剩余字节不足，抛出 `ConnectionError.notEnoughBytes` 错误。
     public func readUInt8() throws -> UInt8 {
         let data: Data = try readData(length: 1)
         let value: UInt8 = data.withUnsafeBytes { $0.load(as: UInt8.self) }
         return value
     }
     
-    /// 读取一个 `UInt16`（大端序）
-    /// - Returns: UInt16
+    /// 读取一个 `UInt16`（大端序）。
+    ///
+    /// - Throws: 若剩余字节不足，抛出 `ConnectionError.notEnoughBytes` 错误。
     public func readUInt16() throws -> UInt16 {
         let data: Data = try readData(length: 2)
         let value: UInt16 = data.withUnsafeBytes { $0.load(as: UInt16.self).bigEndian }
         return value
     }
     
-    /// 读取一个 `UInt32`（大端序）
-    /// - Returns: UInt32
+    /// 读取一个 `UInt32`（大端序）。
+    ///
+    /// - Throws: 若剩余字节不足，抛出 `ConnectionError.notEnoughBytes` 错误。
     public func readUInt32() throws -> UInt32 {
         let data: Data = try readData(length: 4)
         let value: UInt32 = data.withUnsafeBytes { $0.load(as: UInt32.self).bigEndian }
@@ -70,6 +74,9 @@ public class ByteBuffer {
     /// 读取一个 **UTF-8** 字符串。
     ///
     /// - Parameter length: 字符串长度。
+    /// - Throws:
+    ///   - 若剩余字节不足，抛出 `ConnectionError.notEnoughBytes` 错误。
+    ///   - 若解析字符串失败，抛出 `ConnectionError.failedToDecodeString` 错误。
     public func readString(_ length: (any BinaryInteger)? = nil) throws -> String {
         let length: any BinaryInteger = length ?? data.count
         let data: Data = try readData(length: length)

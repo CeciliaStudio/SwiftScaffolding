@@ -18,6 +18,7 @@ public final class EasyTier {
     private var rpcPort: UInt16?
     
     /// 创建一个 EasyTier 实例。
+    ///
     /// - Parameters:
     ///   - coreURL: `easytier-core` 的路径。
     ///   - cliURL: `easytier-cli` 的路径。
@@ -31,6 +32,8 @@ public final class EasyTier {
     }
     
     /// 启动 EasyTier。
+    ///
+    /// 如果已经启动了一个进程，旧进程会被杀死。
     /// - Parameters:
     ///   - args: `easytier-core` 的参数。
     ///   - terminationHandler: 进程退出回调，不会在正常 `terminate()` 时被调用。
@@ -83,9 +86,10 @@ public final class EasyTier {
     }
     
     /// 以 JSON 模式调用 `easytier-cli`。
-    /// 如果 `easytier-cli` 报错，会抛出 `EasyTierError.cliError` 错误。
+    ///
     /// - Parameter args: `easytier-cli` 的参数。
     /// - Returns: 调用结果，不是 JSON 时为 `nil`。
+    /// - Throws: 如果 `easytier-cli` 报错，会抛出 `EasyTierError.cliError` 错误。
     @discardableResult
     public func callCLI(_ args: String...) throws -> JSON? {
         guard let rpcPort = self.rpcPort else { throw ConnectionError.failedToAllocatePort }
@@ -144,6 +148,7 @@ public final class EasyTier {
 
 extension EasyTier {
     /// 添加端口转发规则。
+    ///
     /// - Parameters:
     ///   - protocol: 使用的协议类型，默认为 `tcp`。
     ///   - bind: 本地绑定地址。
@@ -154,6 +159,7 @@ extension EasyTier {
     }
     
     /// 移除端口转发规则。
+    /// 
     /// - Parameters:
     ///   - protocol: 使用的协议类型，默认为 `tcp`。
     ///   - bind: 本地绑定地址。
