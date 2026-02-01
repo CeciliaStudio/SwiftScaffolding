@@ -46,7 +46,7 @@ public class RequestHandler {
             responseBuffer.writeUInt8(255)
             let message: String = "Unknown request"
             responseBuffer.writeUInt32(UInt32(message.count))
-            responseBuffer.writeData(message.data(using: .utf8)!)
+            responseBuffer.writeString(message)
             return
         }
         
@@ -67,7 +67,7 @@ public class RequestHandler {
         
         registerHandler(for: "c:protocols") { sender, requestBody in
             let protocols: String = Array(self.handlers.keys).joined(separator: "\0")
-            return .init(status: 0, data: protocols.data(using: .utf8)!)
+            return .init(status: 0) { $0.writeString(protocols) }
         }
         
         registerHandler(for: "c:server_port") { sender, requestBody in

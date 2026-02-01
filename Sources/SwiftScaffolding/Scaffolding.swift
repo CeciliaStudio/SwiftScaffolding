@@ -39,7 +39,7 @@ public final class Scaffolding {
     ) async throws -> Response {
         let buffer: ByteBuffer = ByteBuffer()
         buffer.writeUInt8(UInt8(type.count))
-        buffer.writeData(type.data(using: .utf8)!)
+        buffer.writeString(type)
         let bodyBuffer: ByteBuffer = ByteBuffer()
         try body(bodyBuffer)
         buffer.writeUInt32(UInt32(bodyBuffer.data.count))
@@ -117,7 +117,6 @@ public final class Scaffolding {
     public final class Response {
         public let status: UInt8
         public let data: Data
-        public var text: String? { String(data: data, encoding: .utf8) }
         
         /// 根据响应状态码与响应体创建响应。
         /// - Parameters:

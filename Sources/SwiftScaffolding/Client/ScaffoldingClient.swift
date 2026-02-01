@@ -195,14 +195,9 @@ public final class ScaffoldingClient {
     
     private func fetchProtocols() async throws {
         let response: Scaffolding.Response = try await sendRequest("c:protocols") { buf in
-            buf.writeData(protocols.joined(separator: "\0").data(using: .utf8)!)
+            buf.writeString(protocols.joined(separator: "\0"))
         }
-        guard let rawProtocols: String = response.text else {
-            Logger.error("Failed to parse c:protocols response")
-            self.serverProtocols = []
-            return
-        }
-        self.serverProtocols = rawProtocols.split(separator: "\0").map(String.init)
+        self.serverProtocols = try response.parse(using: { try $0.readString() }).split(separator: "\0").map(String.init)
     }
     
     private func assertReady() throws {
