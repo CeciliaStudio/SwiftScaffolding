@@ -10,6 +10,8 @@ import Network
 
 internal enum ConnectionUtil {
     /// 向目标地址创建一个 TCP 连接。
+    ///
+    /// 该方法会在 `connection.state` 变为 `.ready` 时正常返回。
     /// - Parameters:
     ///   - host: 目标地址。
     ///   - port: 目标端口。

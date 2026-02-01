@@ -18,6 +18,11 @@ public class RequestHandler {
     }
     
     /// 注册请求处理器。
+    ///
+    /// `handler` 闭包接受两个参数：
+    /// - `sender`：一个 `Sender` 对象，包含发送者的档案信息和连接对象。
+    /// - `buffer`：一个用于读取请求体的 `ByteBuffer`。
+    ///
     /// - Parameters:
     ///   - type: 请求类型，例如 `c:ping`。
     ///   - handler: 请求处理函数。

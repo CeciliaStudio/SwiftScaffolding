@@ -7,11 +7,12 @@
 
 import Foundation
 
-/// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机房间码
+/// 规范文档：[Scaffolding-MC/Scaffolding-MC](https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机房间码)
 public enum RoomCode {
     private static let charset: [Character] = "0123456789ABCDEFGHJKLMNPQRSTUVWXYZ".map { $0 }
     
     /// 生成符合 Scaffolding 规范的房间码。
+    ///
     /// - Returns: 生成的房间码。
     public static func generate() -> String {
         let b: Int = 34
@@ -40,6 +41,7 @@ public enum RoomCode {
     }
     
     /// 验证是否是符合 Scaffolding 规范的房间码。
+    ///
     /// - Parameter code: 房间码。
     /// - Returns: 一个布尔值，为 `true` 时代表该房间码符合 Scaffolding 规范。
     public static func isValid(code: String) -> Bool {

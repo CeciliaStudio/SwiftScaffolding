@@ -27,6 +27,7 @@ public final class ScaffoldingClient {
     }
     
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
+    ///
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
     ///   - playerName: 玩家名。
@@ -52,8 +53,9 @@ public final class ScaffoldingClient {
     }
     
     /// 连接到房间。
+    ///
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
-    /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议
+    /// [标准联机流程](https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#拓展协议)
     /// - Parameters:
     ///   - roomCode: 房间码。
     ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
@@ -120,8 +122,11 @@ public final class ScaffoldingClient {
     }
     
     /// 向联机中心发送请求。
+    ///
+    /// 发送成功后，该方法会一直等待联机中心返回响应。
     /// - Parameters:
     ///   - name: 请求类型。
+    ///   - timeout: 超时时间。
     ///   - body: 请求体构造函数。
     /// - Returns: 联机中心的响应。
     @discardableResult

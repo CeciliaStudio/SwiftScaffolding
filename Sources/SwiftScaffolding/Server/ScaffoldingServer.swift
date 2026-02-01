@@ -26,7 +26,8 @@ public final class ScaffoldingServer {
         easyTier.terminate()
     }
     
-    /// 使用指定的 EasyTier 创建联机中心。
+    /// 创建联机中心。
+    ///
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
     ///   - roomCode: 房间码。若不合法，将在 `createRoom()` 中抛出 `RoomError.invalidRoomCode` 错误。
@@ -54,8 +55,11 @@ public final class ScaffoldingServer {
         self.handler.server = self
     }
     
-    /// 启动连接监听器。
-    public func startListener() async throws {
+    /// 启动联机中心监听器。
+    ///
+    /// 默认会在 `13452` 端口监听。若该端口被占用，会重新申请一个端口。
+    /// - Returns: 联机中心端口号。
+    public func startListener() async throws -> UInt16 {
         let port: UInt16 = try ConnectionUtil.getPort(13452)
         listener = try NWListener(using: .tcp, on: .init(integerLiteral: port))
         listener.newConnectionHandler = { connection in
@@ -100,9 +104,12 @@ public final class ScaffoldingServer {
             listener.start(queue: Scaffolding.networkQueue)
         }
         Logger.info("ScaffoldingServer listener started at 127.0.0.1:\(port)")
+        return port
     }
     
     /// 创建 EasyTier 网络。
+    ///
+    /// 如果只是本地测试，无需创建 EasyTier 网络，可以直接使用 `ScaffoldingClient.connectDirectly(port:)` 连接。
     /// - Parameter terminationHandler: 进程退出回调，不会在正常关闭时被调用。
     public func createRoom(terminationHandler: ((Process) -> Void)? = nil) throws {
         guard let listener = listener,

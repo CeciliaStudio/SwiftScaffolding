@@ -14,7 +14,8 @@ public final class Scaffolding {
     internal static let networkQueue: DispatchQueue = DispatchQueue(label: "SwiftScaffolding.Network")
     
     /// 根据设备的主板唯一标识符生成设备标识符。
-    /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id
+    ///
+    /// [machine_id 文档](https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#machine_id)
     /// - Returns: 设备标识符。
     public static func getMachineID(forHost: Bool = false) -> String {
         let service: io_service_t = IOServiceGetMatchingService(kIOMainPortDefault, IOServiceMatching("IOPlatformExpertDevice"))
@@ -26,7 +27,8 @@ public final class Scaffolding {
     }
     
     /// 发送 Scaffolding 请求。
-    /// https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机信息获取协议
+    ///
+    /// [协议文档](https://github.com/Scaffolding-MC/Scaffolding-MC/blob/main/README.md#联机信息获取协议)
     /// - Parameters:
     ///   - type: 请求类型。
     ///   - connection: 到联机中心的连接。
@@ -94,6 +96,7 @@ public final class Scaffolding {
     }
     
     /// 检查本地指定端口是否存在一个 Minecraft 服务器。
+    ///
     /// - Parameters:
     ///   - port: 服务器端口。
     public static func checkMinecraftServer(on port: UInt16, timeout: Double = 10) async -> Bool {
@@ -119,6 +122,7 @@ public final class Scaffolding {
         public let data: Data
         
         /// 根据响应状态码与响应体创建响应。
+        /// 
         /// - Parameters:
         ///   - status: 响应状态。
         ///   - data: 响应体。
@@ -128,6 +132,7 @@ public final class Scaffolding {
         }
         
         /// 根据响应状态码与响应体构造函数创建响应。
+        ///
         /// - Parameters:
         ///   - status: 响应状态。
         ///   - body: 响应体构造函数。
