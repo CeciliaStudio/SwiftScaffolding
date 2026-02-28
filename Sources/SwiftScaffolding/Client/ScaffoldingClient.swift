@@ -19,13 +19,11 @@ public final class ScaffoldingClient {
     private var connection: NWConnection!
     private var serverNodeIp: String!
     private var protocols: [String]
-    private var heartbeatTask: Task<Void, Error>?
+    private var heartbeatTask: Task<Void, Never>?
     
     deinit {
         Logger.debug("ScaffoldingClient is being deallocated")
-        heartbeatTask?.cancel()
-        connection?.cancel()
-        easyTier.terminate()
+        stop()
     }
     
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
@@ -174,7 +172,7 @@ public final class ScaffoldingClient {
     ///
     /// 如果已有一个任务正在运行，该方法会直接返回。
     /// - Throws: `ScaffoldingClient` 状态异常。
-    public func startHeartbeatTask() throws {
+    public func startHeartbeatTask(failureHandler: ((Error) async -> Void)?) throws {
         guard connection != nil, room != nil else {
             throw ConnectionError.missingConnection
         }
@@ -192,7 +190,7 @@ public final class ScaffoldingClient {
             } catch is CancellationError {
             } catch {
                 Logger.error("Heartbeat task failed: \(error.localizedDescription)")
-                throw error
+                await failureHandler?(error)
             }
         }
     }
@@ -201,6 +199,8 @@ public final class ScaffoldingClient {
     public func stop() {
         Logger.info("Stopping scaffolding client")
         easyTier.terminate()
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
         connection?.cancel()
         connection = nil
     }
