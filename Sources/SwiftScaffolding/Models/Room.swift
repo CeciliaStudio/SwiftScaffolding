@@ -11,6 +11,7 @@ import Network
 public final class Room: ObservableObject {
     /// 房客列表。
     @Published public internal(set) var members: [Member] = []
+    
     /// Minecraft 服务器端口。
     public internal(set) var serverPort: UInt16
     

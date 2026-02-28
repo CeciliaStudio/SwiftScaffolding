@@ -30,18 +30,13 @@ public final class ScaffoldingClient {
     ///
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
-    ///   - playerName: 玩家名。
-    ///   - vendor: 联机客户端信息。
-    public init(
-        easyTier: EasyTier,
-        playerName: String,
-        vendor: String
-    ) {
+    ///   - playerInfo: 玩家信息。
+    public init(easyTier: EasyTier, playerInfo: PlayerInfo) {
         self.easyTier = easyTier
         self.player = .init(
-            name: playerName,
+            name: playerInfo.name,
             machineID: Scaffolding.getMachineID(),
-            vendor: vendor,
+            vendor: playerInfo.vendor,
             kind: .guest
         )
         
@@ -50,6 +45,15 @@ public final class ScaffoldingClient {
         self.decoder = .init()
         
         self.protocols = RequestHandler().protocols()
+    }
+    
+    // 旧格式支持
+    public convenience init(
+        easyTier: EasyTier,
+        playerName: String,
+        vendor: String
+    ) {
+        self.init(easyTier: easyTier, playerInfo: .init(name: playerName, vendor: vendor))
     }
     
     /// 连接到房间。

@@ -31,18 +31,21 @@ public final class ScaffoldingServer {
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
     ///   - roomCode: 房间码。若不合法，将在 `createRoom()` 中抛出 `RoomError.invalidRoomCode` 错误。
-    ///   - playerName: 玩家名。
-    ///   - vendor: 联机客户端信息。
     ///   - serverPort: Minecraft 服务器端口号。
+    ///   - hostInfo: 房主信息。
     public init(
         easyTier: EasyTier,
         roomCode: String,
-        playerName: String,
-        vendor: String,
-        serverPort: UInt16
+        serverPort: UInt16,
+        hostInfo: PlayerInfo
     ) {
         self.room = Room(
-            members: [.init(name: playerName, machineID: Scaffolding.getMachineID(forHost: true), vendor: vendor, kind: .host)],
+            members: [.init(
+                name: hostInfo.name,
+                machineID: Scaffolding.getMachineID(forHost: true),
+                vendor: hostInfo.vendor,
+                kind: .host
+            )],
             serverPort: serverPort
         )
         self.easyTier = easyTier
@@ -55,10 +58,21 @@ public final class ScaffoldingServer {
         self.handler.server = self
     }
     
+    // 旧格式支持
+    public convenience init(
+        easyTier: EasyTier,
+        roomCode: String,
+        playerName: String,
+        vendor: String,
+        serverPort: UInt16
+    ) {
+        self.init(easyTier: easyTier, roomCode: roomCode, serverPort: serverPort, hostInfo: .init(name: playerName, vendor: vendor))
+    }
+    
     /// 启动联机中心监听器。
     ///
     /// 默认会在 `13452` 端口监听。若该端口被占用，会重新申请一个端口。
-    /// - Returns: 联机中心端口号。
+    /// - Returns: 联机中心实际端口号。
     @discardableResult
     public func startListener() async throws -> UInt16 {
         let port: UInt16 = try ConnectionUtil.getPort(13452)
