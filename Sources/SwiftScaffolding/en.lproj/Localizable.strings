@@ -13,6 +13,7 @@
 "ConnectionError.failedToAllocatePort" = "Failed to allocate port.";
 "ConnectionError.notEnoughBytes" = "The peer did not send enough data.";
 "ConnectionError.failedToDecodeString" = "Failed to decode string.";
+"ConnectionError.alreadyConnected" = "There is already an established connection.";
 
 "RoomError.invalidRoomCode" = "The room code was invalid.";
 "RoomError.roomClosed" = "The room has been closed, or the network is unstable.";

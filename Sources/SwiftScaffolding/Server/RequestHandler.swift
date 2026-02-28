@@ -10,7 +10,7 @@ import SwiftyJSON
 import Network
 
 public class RequestHandler {
-    var server: ScaffoldingServer!
+    weak var server: ScaffoldingServer?
     private var handlers: [String: (Sender, ByteBuffer) throws -> Scaffolding.Response] = [:]
     
     internal init() {
@@ -35,17 +35,13 @@ public class RequestHandler {
         return Array(handlers.keys)
     }
     
-    internal func destroy() {
-        handlers.removeAll()
-        server = nil
-    }
-    
     internal func handleRequest(
         from connection: NWConnection,
         type: String,
         requestBody: ByteBuffer,
         responseBuffer: ByteBuffer
     ) throws {
+        guard let server else { return }
         guard let handler = handlers[type] else {
             Logger.warn("Unknown request: \(type)")
             responseBuffer.writeUInt8(255)
@@ -66,62 +62,71 @@ public class RequestHandler {
     }
     
     private func registerHandlers() {
-        registerHandler(for: "c:ping") { sender, requestBody in
-            return .init(status: 0, data: requestBody.data)
+        registerHandler(for: "c:ping", handler: handlePing(sender:requestBody:))
+        registerHandler(for: "c:protocols", handler: handleProtocols(sender:requestBody:))
+        registerHandler(for: "c:server_port", handler: handleServerPort(sender:requestBody:))
+        registerHandler(for: "c:player_ping", handler: handlePlayerPing(sender:requestBody:))
+        registerHandler(for: "c:player_profiles_list", handler: handlePlayerList(sender:requestBody:))
+    }
+    
+    private func handlePing(sender: Sender, requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        return .init(status: 0, data: requestBody.data)
+    }
+    
+    private func handleProtocols(sender: Sender, requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        let protocols: String = Array(self.handlers.keys).joined(separator: "\0")
+        return .init(status: 0) { $0.writeString(protocols) }
+    }
+    
+    private func handleServerPort(sender: Sender, requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        guard let server else { return .init(status: 255, data: .init()) }
+        return .init(status: 0) { $0.writeUInt16(server.room.serverPort) }
+    }
+    
+    private func handlePlayerPing(sender: Sender, requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        guard let server else { return .init(status: 255, data: .init()) }
+        let connection: NWConnection = sender.connection
+        let rawMember: Member = try server.decoder.decode(Member.self, from: requestBody.data)
+        
+        let member: Member = .init(
+            name: rawMember.name,
+            machineID: rawMember.machineId,
+            vendor: rawMember.vendor,
+            kind: .guest
+        )
+        
+        let identifier: ObjectIdentifier = .init(connection)
+        
+        if server.machineIdMap[identifier] == nil
+            && server.machineIdMap.values.contains(member.machineId) {
+            Logger.warn("Detected a machine_id collision")
+            throw RoomError.playerInfoMismatch
+        }
+        if let machineId = server.machineIdMap[identifier], machineId != member.machineId {
+            Logger.warn("machine_id mismatch detected")
+            throw RoomError.playerInfoMismatch
         }
         
-        registerHandler(for: "c:protocols") { sender, requestBody in
-            let protocols: String = Array(self.handlers.keys).joined(separator: "\0")
-            return .init(status: 0) { $0.writeString(protocols) }
-        }
+        server.machineIdMap[identifier] = member.machineId
         
-        registerHandler(for: "c:server_port") { sender, requestBody in
-            return .init(status: 0) { $0.writeUInt16(self.server.room.serverPort) }
-        }
-        
-        registerHandler(for: "c:player_ping") { sender, requestBody in
-            let connection: NWConnection = sender.connection
-            let rawMember: Member = try self.server.decoder.decode(Member.self, from: requestBody.data)
-            
-            let member: Member = .init(
-                name: rawMember.name,
-                machineID: rawMember.machineId,
-                vendor: rawMember.vendor,
-                kind: .guest
-            )
-            
-            let identifier: ObjectIdentifier = .init(connection)
-            
-            if self.server.machineIdMap[identifier] == nil
-                && self.server.machineIdMap.values.contains(member.machineId) {
-                Logger.warn("Detected a machine_id collision")
+        if let storedMember: Member = server.room.members.first(where: { $0.machineId == member.machineId }) {
+            if storedMember != member {
+                Logger.warn("Member info mismatch for \(storedMember.name)")
                 throw RoomError.playerInfoMismatch
             }
-            if let machineId = self.server.machineIdMap[identifier], machineId != member.machineId {
-                Logger.warn("machine_id mismatch detected")
-                throw RoomError.playerInfoMismatch
+        } else {
+            Logger.info("Received player info from \(connection.endpoint.debugDescription): { \"name\": \"\(member.name)\", \"vendor\": \"\(member.vendor)\", \"machine_id\": \"\(member.machineId)\"}")
+            DispatchQueue.main.async {
+                server.room.members.append(member)
             }
-            
-            self.server.machineIdMap[identifier] = member.machineId
-            
-            if let storedMember: Member = self.server.room.members.first(where: { $0.machineId == member.machineId }) {
-                if storedMember != member {
-                    Logger.warn("Member info mismatch for \(storedMember.name)")
-                    throw RoomError.playerInfoMismatch
-                }
-            } else {
-                Logger.info("Received player info from \(connection.endpoint.debugDescription): { \"name\": \"\(member.name)\", \"vendor\": \"\(member.vendor)\", \"machine_id\": \"\(member.machineId)\"}")
-                DispatchQueue.main.async {
-                    self.server.room.members.append(member)
-                }
-            }
-            
-            return .init(status: 0, data: Data())
         }
         
-        registerHandler(for: "c:player_profiles_list") { sender, requestBody in
-            return .init(status: 0, data: try self.server.encoder.encode(self.server.room.members))
-        }
+        return .init(status: 0, data: Data())
+    }
+    
+    private func handlePlayerList(sender: Sender, requestBody: ByteBuffer) throws -> Scaffolding.Response {
+        guard let server else { return .init(status: 255, data: .init()) }
+        return .init(status: 0, data: try server.encoder.encode(server.room.members))
     }
     
     public struct Sender {

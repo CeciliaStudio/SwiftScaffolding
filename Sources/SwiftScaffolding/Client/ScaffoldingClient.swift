@@ -19,29 +19,24 @@ public final class ScaffoldingClient {
     private var connection: NWConnection!
     private var serverNodeIp: String!
     private var protocols: [String]
+    private var heartbeatTask: Task<Void, Never>?
     
     deinit {
         Logger.debug("ScaffoldingClient is being deallocated")
-        connection?.cancel()
-        easyTier.terminate()
+        stop()
     }
     
     /// 使用指定的 EasyTier 创建连接到指定房间的 `ScaffoldingClient`。
     ///
     /// - Parameters:
     ///   - easyTier: 使用的 EasyTier。
-    ///   - playerName: 玩家名。
-    ///   - vendor: 联机客户端信息。
-    public init(
-        easyTier: EasyTier,
-        playerName: String,
-        vendor: String
-    ) {
+    ///   - playerInfo: 玩家信息。
+    public init(easyTier: EasyTier, playerInfo: PlayerInfo) {
         self.easyTier = easyTier
         self.player = .init(
-            name: playerName,
+            name: playerInfo.name,
             machineID: Scaffolding.getMachineID(),
-            vendor: vendor,
+            vendor: playerInfo.vendor,
             kind: .guest
         )
         
@@ -52,6 +47,16 @@ public final class ScaffoldingClient {
         self.protocols = RequestHandler().protocols()
     }
     
+    // 旧格式支持
+    @available(*, deprecated, renamed: "ScaffoldingClient.init(easyTier:playerInfo:)", message: "")
+    public convenience init(
+        easyTier: EasyTier,
+        playerName: String,
+        vendor: String
+    ) {
+        self.init(easyTier: easyTier, playerInfo: .init(name: playerName, vendor: vendor))
+    }
+    
     /// 连接到房间。
     ///
     /// 该方法返回后，必须每隔 5s 调用一次 `heartbeat()` 方法。
@@ -60,6 +65,9 @@ public final class ScaffoldingClient {
     ///   - roomCode: 房间码。
     ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
     public func connect(to roomCode: String, checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
+        guard connection == nil else {
+            throw ConnectionError.alreadyConnected
+        }
         guard RoomCode.isValid(code: roomCode) else {
             throw RoomError.invalidRoomCode
         }
@@ -160,10 +168,39 @@ public final class ScaffoldingClient {
         }
     }
     
+    /// 启动自动心跳任务。
+    ///
+    /// 如果已有一个任务正在运行，该方法会直接返回。
+    /// - Throws: `ScaffoldingClient` 状态异常。
+    public func startHeartbeatTask(failureHandler: ((Error) async -> Void)?) throws {
+        guard connection != nil, room != nil else {
+            throw ConnectionError.missingConnection
+        }
+        if let heartbeatTask, !heartbeatTask.isCancelled {
+            return
+        }
+        heartbeatTask = Task { [weak self] in
+            do {
+                while !Task.isCancelled {
+                    guard let self else { break }
+                    try await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+                    try Task.checkCancellation()
+                    try await self.heartbeat()
+                }
+            } catch is CancellationError {
+            } catch {
+                Logger.error("Heartbeat task failed: \(error.localizedDescription)")
+                await failureHandler?(error)
+            }
+        }
+    }
+    
     /// 退出房间并关闭连接。
     public func stop() {
         Logger.info("Stopping scaffolding client")
         easyTier.terminate()
+        heartbeatTask?.cancel()
+        heartbeatTask = nil
         connection?.cancel()
         connection = nil
     }
