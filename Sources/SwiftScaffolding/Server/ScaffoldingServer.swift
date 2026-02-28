@@ -167,7 +167,6 @@ public final class ScaffoldingServer {
             }
         }
         connections = []
-        handler.destroy()
     }
     
     
