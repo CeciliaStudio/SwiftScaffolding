@@ -13,6 +13,7 @@
 "ConnectionError.failedToAllocatePort" = "端口分配失败。";
 "ConnectionError.notEnoughBytes" = "对端未发送足够长的数据。";
 "ConnectionError.failedToDecodeString" = "解析字符串失败。";
+"ConnectionError.alreadyConnected" = "已有一个已建立的连接。";
 
 "RoomError.invalidRoomCode" = "无效的房间码。";
 "RoomError.roomClosed" = "房间已被关闭，或者网络不稳定。";

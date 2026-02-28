@@ -59,6 +59,7 @@ public final class ScaffoldingServer {
     }
     
     // 旧格式支持
+    @available(*, deprecated, renamed: "ScaffoldingServer.init(easyTier:roomCode:serverPort:hostInfo:)", message: "")
     public convenience init(
         easyTier: EasyTier,
         roomCode: String,

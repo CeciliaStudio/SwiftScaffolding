@@ -19,9 +19,11 @@ public final class ScaffoldingClient {
     private var connection: NWConnection!
     private var serverNodeIp: String!
     private var protocols: [String]
+    private var heartbeatTask: Task<Void, Error>?
     
     deinit {
         Logger.debug("ScaffoldingClient is being deallocated")
+        heartbeatTask?.cancel()
         connection?.cancel()
         easyTier.terminate()
     }
@@ -48,6 +50,7 @@ public final class ScaffoldingClient {
     }
     
     // 旧格式支持
+    @available(*, deprecated, renamed: "ScaffoldingClient.init(easyTier:playerInfo:)", message: "")
     public convenience init(
         easyTier: EasyTier,
         playerName: String,
@@ -64,6 +67,9 @@ public final class ScaffoldingClient {
     ///   - roomCode: 房间码。
     ///   - checkServer: 是否检查联机中心返回的 Minecraft 服务器端口号。
     public func connect(to roomCode: String, checkServer: Bool = true, terminationHandler: ((Process) -> Void)? = nil) async throws {
+        guard connection == nil else {
+            throw ConnectionError.alreadyConnected
+        }
         guard RoomCode.isValid(code: roomCode) else {
             throw RoomError.invalidRoomCode
         }
@@ -161,6 +167,33 @@ public final class ScaffoldingClient {
         let memberList: [Member] = try decoder.decode([Member].self, from: await sendRequest("c:player_profiles_list").data)
         await MainActor.run {
             self.room.members = memberList
+        }
+    }
+    
+    /// 启动自动心跳任务。
+    ///
+    /// 如果已有一个任务正在运行，该方法会直接返回。
+    /// - Throws: `ScaffoldingClient` 状态异常。
+    public func startHeartbeatTask() throws {
+        guard connection != nil, room != nil else {
+            throw ConnectionError.missingConnection
+        }
+        if heartbeatTask != nil {
+            return
+        }
+        heartbeatTask = Task { [weak self] in
+            do {
+                while !Task.isCancelled {
+                    guard let self else { break }
+                    try await Task.sleep(nanoseconds: 5 * 1_000_000_000)
+                    try Task.checkCancellation()
+                    try await self.heartbeat()
+                }
+            } catch is CancellationError {
+            } catch {
+                Logger.error("Heartbeat task failed: \(error.localizedDescription)")
+                throw error
+            }
         }
     }
     

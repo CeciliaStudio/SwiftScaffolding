@@ -16,6 +16,7 @@ public enum ConnectionError: LocalizedError, Equatable {
     case failedToAllocatePort
     case notEnoughBytes
     case failedToDecodeString
+    case alreadyConnected
     
     public var errorDescription: String? {
         switch self {
@@ -60,6 +61,12 @@ public enum ConnectionError: LocalizedError, Equatable {
                 "ConnectionError.failedToDecodeString",
                 bundle: Bundle.module,
                 comment: "解析 UTF-8 字符串失败"
+            )
+        case .alreadyConnected:
+            return NSLocalizedString(
+                "ConnectionError.alreadyConnected",
+                bundle: Bundle.module,
+                comment: "已有一个已建立的连接"
             )
         }
     }
