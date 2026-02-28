@@ -59,6 +59,7 @@ public final class ScaffoldingServer {
     ///
     /// 默认会在 `13452` 端口监听。若该端口被占用，会重新申请一个端口。
     /// - Returns: 联机中心端口号。
+    @discardableResult
     public func startListener() async throws -> UInt16 {
         let port: UInt16 = try ConnectionUtil.getPort(13452)
         listener = try NWListener(using: .tcp, on: .init(integerLiteral: port))
