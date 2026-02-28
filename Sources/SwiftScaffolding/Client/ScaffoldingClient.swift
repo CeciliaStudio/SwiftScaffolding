@@ -176,7 +176,7 @@ public final class ScaffoldingClient {
         guard connection != nil, room != nil else {
             throw ConnectionError.missingConnection
         }
-        if heartbeatTask != nil {
+        if let heartbeatTask, !heartbeatTask.isCancelled {
             return
         }
         heartbeatTask = Task { [weak self] in
