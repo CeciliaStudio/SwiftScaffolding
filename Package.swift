@@ -22,6 +22,10 @@ let package = Package(
             dependencies: [
                 .product(name: "SwiftyJSON", package: "SwiftyJSON")
             ]
+        ),
+        .testTarget(
+            name: "SwiftScaffoldingTests",
+            dependencies: ["SwiftScaffolding"]
         )
     ]
 )
